@@ -1,4 +1,87 @@
+---
+alwaysApply: false
+description: 明确提到需要进行git操作时，必须先征求用户明确同意，然后才能执行
+---
 # 项目规则
+
+## ⚠️ AI 助手操作规范
+
+### Git 操作规范
+
+**重要**：AI 助手在执行任何 Git 操作之前，必须先征求用户明确同意。
+
+#### 禁止自动执行的 Git 操作
+
+以下操作**禁止** AI 助手自动执行，必须先征求用户同意：
+
+- `git add` - 添加文件到暂存区
+- `git commit` - 提交更改
+- `git push` - 推送到远程仓库
+- `git pull` - 拉取远程更改
+- `git merge` - 合并分支
+- `git rebase` - 变基操作
+- `git reset` - 重置提交
+- `git revert` - 回滚提交
+- `git tag` - 创建标签
+- `git branch` - 创建/删除分支
+
+#### 正确的工作流程
+
+1. **准备阶段**：AI 助手可以执行以下操作
+   - 创建/修改文件
+   - 运行测试
+   - 构建项目
+   - 检查代码质量（lint、typecheck）
+
+2. **确认阶段**：AI 助手在执行 Git 操作前必须
+   - 展示将要执行的 Git 命令
+   - 说明操作的目的和影响
+   - 等待用户明确确认
+
+3. **执行阶段**：仅在用户明确同意后执行
+   - 执行 Git 操作
+   - 展示操作结果
+   - 确认操作成功
+
+#### 示例对话
+
+**❌ 错误做法**：
+```
+用户：帮我创建 Dockerfile
+AI：好的，已创建 Dockerfile
+AI：正在执行 git add Dockerfile
+AI：正在执行 git commit -m "feat: add Dockerfile"
+AI：正在执行 git push origin main
+```
+
+**✅ 正确做法**：
+```
+用户：帮我创建 Dockerfile
+AI：好的，已创建 Dockerfile
+AI：我已创建以下文件：
+   - Dockerfile
+   - docker-compose.yml
+   - docker/nginx.conf
+   
+AI：现在需要提交这些更改到 Git，我将执行以下命令：
+   git add Dockerfile docker-compose.yml docker/nginx.conf
+   git commit -m "feat(deploy): add Docker configuration"
+   git push origin main
+   
+AI：是否同意执行这些 Git 操作？(y/n)
+用户：y
+AI：正在执行 Git 操作...
+AI：✅ Git 操作完成
+```
+
+#### 例外情况
+
+以下情况可以跳过确认（但仍需告知用户）：
+- `git status` - 查看仓库状态
+- `git log` - 查看提交历史
+- `git diff` - 查看文件差异
+- `git remote -v` - 查看远程仓库
+- 只读操作
 
 ## Git 提交规范
 
