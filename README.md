@@ -118,12 +118,15 @@ AiTravelPlanner/
 - Node.js 18.x 或更高版本
 - pnpm 8.x 或 npm 9.x
 - Git
+- Docker 20.10+ 和 Docker Compose 2.0+（用于 Docker 部署）
 
 ### 安装步骤
 
+#### 方式 1：本地开发
+
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/AiTravelPlanner.git
+   git clone https://github.com/araragi-koyomin/AiTravelPlanner.git
    cd AiTravelPlanner
    ```
 
@@ -163,6 +166,45 @@ AiTravelPlanner/
    打开浏览器访问 http://localhost:5173
    ```
 
+#### 方式 2：Docker 部署
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/araragi-koyomin/AiTravelPlanner.git
+   cd AiTravelPlanner
+   ```
+
+2. **配置环境变量**
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env
+   
+   # 编辑 .env 文件，填入实际的配置
+   nano .env  # 或使用其他编辑器
+   ```
+
+3. **使用 Docker Compose 启动**
+   ```bash
+   # 构建并启动容器
+   docker-compose up -d
+   
+   # 查看容器日志
+   docker-compose logs -f
+   ```
+
+4. **访问应用**
+   ```
+   打开浏览器访问 http://localhost:3000
+   ```
+
+5. **停止容器**
+   ```bash
+   # 停止并删除容器
+   docker-compose down
+   ```
+
+**详细的 Docker 部署指南**：请查看 [Docker 部署文档](docs/DOCKER_DEPLOYMENT.md)
+
 ### Docker 部署（开发阶段完成后）
 
 ```bash
@@ -179,18 +221,19 @@ docker run -p 3000:80 --env-file .env ai-travel-planner
 - [技术架构设计](docs/TECHNICAL_ARCHITECTURE.md) - 系统架构、数据库设计、API 接口设计
 - [开发工作计划](docs/DEVELOPMENT_PLAN.md) - 8 周详细开发计划和里程碑
 - [安全规范文档](docs/SECURITY.md) - API Key 管理、数据安全、认证授权等安全规范
+- [Docker 部署文档](docs/DOCKER_DEPLOYMENT.md) - Docker 部署指南、命令参考、故障排查
 
 ## 🗓️ 开发计划
 
 项目预计开发周期为 **8 周**，分为以下阶段：
 
-| 阶段 | 时间 | 主要任务 |
-|------|------|----------|
+| 阶段    | 时间                 | 主要任务                                 |
+| ------- | -------------------- | ---------------------------------------- |
 | 第1-2周 | 项目初始化与基础架构 | 环境搭建、基础组件、数据库设计、认证系统 |
-| 第3-4周 | 核心功能开发 | 智能行程规划、地图集成、行程管理 |
-| 第5-6周 | 增强功能开发 | 语音识别、费用管理、云端同步 |
-| 第7周 | 测试与优化 | 功能测试、Bug 修复、性能优化 |
-| 第8周 | 部署与文档 | Docker 部署、CI/CD、文档编写 |
+| 第3-4周 | 核心功能开发         | 智能行程规划、地图集成、行程管理         |
+| 第5-6周 | 增强功能开发         | 语音识别、费用管理、云端同步             |
+| 第7周   | 测试与优化           | 功能测试、Bug 修复、性能优化             |
+| 第8周   | 部署与文档           | Docker 部署、CI/CD、文档编写             |
 
 详细的开发计划请参考 [开发工作计划](docs/DEVELOPMENT_PLAN.md)。
 

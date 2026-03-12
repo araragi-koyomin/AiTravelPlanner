@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-travel-planner
+    ports:
+      - "3000:8080"
+    environment:
+      - NODE_ENV=production
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_ZHIPU_API_KEY=${VITE_ZHIPU_API_KEY}
+      - VITE_XUNFEI_APP_ID=${VITE_XUNFEI_APP_ID}
+      - VITE_XUNFEI_API_KEY=${VITE_XUNFEI_API_KEY}
+      - VITE_XUNFEI_API_SECRET=${VITE_XUNFEI_API_SECRET}
+      - VITE_AMAP_KEY=${VITE_AMAP_KEY}
+      - VITE_AMAP_SECURITY_JS_CODE=${VITE_AMAP_SECURITY_JS_CODE}
+      - VITE_ENCRYPTION_KEY=${VITE_ENCRYPTION_KEY}
+      - VITE_APP_NAME=${VITE_APP_NAME:-AI Travel Planner}
+      - VITE_APP_VERSION=${VITE_APP_VERSION:-1.0.0}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      - VITE_ENABLE_SPEECH_RECOGNITION=${VITE_ENABLE_SPEECH_RECOGNITION:-true}
+      - VITE_ENABLE_DARK_MODE=${VITE_ENABLE_DARK_MODE:-true}
+      - VITE_ENABLE_MULTI_LANGUAGE=${VITE_ENABLE_MULTI_LANGUAGE:-true}
+      - VITE_DEV_MODE=${VITE_DEV_MODE:-false}
+      - VITE_DEBUG_MODE=${VITE_DEBUG_MODE:-false}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ai-travel-planner-network
+
+networks:
+  ai-travel-planner-network:
+    driver: bridge
+
+volumes:
+  # If you need to persist logs, uncomment the following:
+  # nginx-logs:
+  #   driver: local
