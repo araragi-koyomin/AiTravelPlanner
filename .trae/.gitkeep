@@ -1,0 +1,4 @@
+# .trae directory ignore rules
+
+# Keep all files in .trae directory
+# This file ensures .trae directory is tracked by git

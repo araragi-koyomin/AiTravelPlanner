@@ -1,0 +1,299 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Production
+dist/
+build/
+out/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.sublime-project
+*.sublime-workspace
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Docker
+*.log
+
+# Supabase
+.supabase/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Build artifacts
+*.tgz
+*.tar.gz
+
+# Lock files (optional - uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# API Keys and secrets (SECURITY CRITICAL)
+*.key
+*.pem
+*.crt
+secrets/
+credentials/
+config/secrets.json
+
+# User uploads (if any)
+public/uploads/
+uploads/
+
+# Database backups (if any)
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# IDE - VSCode
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# IDE - JetBrains
+.idea/
+*.iml
+*.iws
+
+# IDE - Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IDE - Vim
+*.swp
+*.swo
+*~
+
+# IDE - Emacs
+*~
+\#*\#
+.\#*
+
+# OS - Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# OS - macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# OS - Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Package managers
+bower_components/
+
+# Webpack
+.webpack/
+
+# Next.js (if used)
+.next/
+
+# Nuxt.js (if used)
+.nuxt/
+
+# Gatsby (if used)
+.cache/
+public/
+
+# SvelteKit (if used)
+.svelte-kit/
+
+# Angular (if used)
+.angular/
+
+# Vue (if used)
+dist-ssr/
+*.local
+
+# Storybook
+storybook-static/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Netlify
+.netlify/
+
+# Vercel
+.vercel/
+
+# AWS
+.aws/
+
+# Google Cloud
+.gcloudignore
+
+# Heroku
+.heroku/
+
+# Docker
+*.log
+
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ansible
+*.retry
+vault.yml
+
+# Chef
+Berksfile.lock
+.zero-knife.rb
+Policyfile.lock.json
+
+# Puppet
+*.pp
+
+# SaltStack
+.salt-cache/
+
+# Packer
+packer_cache/
+
+# Vagrant
+.vagrant/
+
+# VirtualBox
+*.vbox
+*.vbox-prev
+
+# VMware
+*.vmx
+*.vmxf
+*.vmdk
+*.nvram
+*.vmsd
+*.vmsn
+*.vmss
+*.vmwarevm/
+
+# Parallels
+*.pvm
+
+# QEMU
+*.qcow2
+
+# Xen
+*.xva
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.npm
+.eslintcache
+.node_repl_history
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*

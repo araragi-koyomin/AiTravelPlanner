@@ -1,0 +1,60 @@
+# <type>(<scope>): <subject>
+#
+# --------------------
+# Type 类型说明：
+#   feat     - 新功能
+#   fix      - 修复 bug
+#   docs     - 文档更新
+#   style    - 代码格式调整（不影响代码运行的变动）
+#   refactor - 重构（既不是新增功能，也不是修复 bug）
+#   perf     - 性能优化
+#   test     - 测试相关
+#   chore    - 构建过程或辅助工具的变动
+#   ci       - CI/CD 配置文件和脚本的变动
+#   revert   - 回滚之前的 commit
+#
+# --------------------
+# Scope 范围说明：
+#   auth      - 认证相关
+#   itinerary - 行程相关
+#   expense   - 费用相关
+#   map       - 地图相关
+#   speech    - 语音相关
+#   ui        - UI 组件
+#   api       - API 服务
+#   db        - 数据库
+#   config    - 配置文件
+#   docs      - 文档
+#   deploy    - 部署
+#
+# --------------------
+# Subject 主题说明：
+#   - 使用现在时态："add" 而不是 "added"
+#   - 首字母小写
+#   - 结尾不加句号
+#   - 不超过 50 个字符
+#
+# --------------------
+# Body 正文说明（可选）：
+#   - 每行不超过 72 个字符
+#   - 说明"是什么"和"为什么"，而不是"怎么做"
+#   - 使用现在时态和祈使语气
+#
+# --------------------
+# Footer 脚注说明（可选）：
+#   - 列出相关的 Issue，如：Closes #123, Fixes #456
+#   - 列出 Breaking Changes
+#
+# --------------------
+# 示例：
+#
+# feat(itinerary): add AI itinerary generation
+#
+# Implement AI-powered itinerary generation using Zhipu AI GLM-4 model.
+# Users can now generate personalized travel plans by inputting
+# destination, dates, budget, and preferences.
+#
+# Closes #123
+#
+# --------------------
+# 请在上方填写提交信息，空行以下的内容将被忽略
