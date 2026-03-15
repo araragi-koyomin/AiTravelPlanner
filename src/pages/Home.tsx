@@ -20,7 +20,7 @@ export function Home() {
 
         <div className="mb-12 flex justify-center gap-4">
           <Button size="lg">
-            <Link to="/itineraries/create">创建新行程</Link>
+            <Link to="/itineraries/new">创建新行程</Link>
           </Button>
           {!isAuthenticated && (
             <Button variant="outline" size="lg">
