@@ -25,9 +25,12 @@
 AiTravelPlanner/
 ├── docs/                    # 开发文档
 ├── .trae/                   # 项目规则和模板
+│   ├── rules/               # 项目规则
+│   └── templates/           # 文档模板
 ├── src/                     # 源代码
 ├── public/                  # 静态资源
 ├── docker/                  # Docker 配置
+├── test_report/             # 测试报告和验收报告
 ├── .env.example             # 环境变量模板
 ├── package.json             # 项目配置
 ├── tsconfig.json            # TypeScript 配置
@@ -55,6 +58,7 @@ AiTravelPlanner/
 | `docs/SUPABASE_SETUP.md`    | Supabase 配置指南    | 配置后端服务             |
 | `docs/API_CONFIGURATION.md` | 第三方 API 配置指南  | 配置外部 API 服务        |
 | `docs/DATABASE_DESIGN.md`   | 数据库设计文档       | 了解数据库结构和关系     |
+| `docs/MANUAL_TESTING.md`    | 手动测试流程文档     | 进行手动测试时参考       |
 
 ### 开发规范文档
 
@@ -71,7 +75,24 @@ AiTravelPlanner/
 | `docs/DOCKER_DEPLOYMENT.md`           | Docker 部署文档              |
 | `docs/SUPABASE_INTEGRATION.md`        | Supabase 集成文档            |
 | `docs/DATABASE_DEVELOPMENT_ISSUES.md` | 数据库开发常见问题与解决方案 |
+| `docs/UNIT_TESTING.md`                | 单元测试配置文档             |
+| `docs/UNIT_TESTING_DEBUG.md`          | 单元测试 Debug 经验总结      |
+| `docs/MANUAL_TESTING.md`              | 手动测试流程文档             |
 | `.trae/rules/project_rules.md`        | 项目规则（Git 提交规范等）   |
+
+### 测试报告
+
+| 报告路径                                      | 用途                 |
+| --------------------------------------------- | -------------------- |
+| `test_report/Task1.3-认证系统开发测试报告.md` | 认证系统开发测试报告 |
+| `test_report/Task1.3-认证系统开发验收报告.md` | 认证系统开发验收报告 |
+
+### 文档模板
+
+| 模板路径                                        | 用途             |
+| ----------------------------------------------- | ---------------- |
+| `.trae/templates/TEST_REPORT_TEMPLATE.md`       | 测试报告模板     |
+| `.trae/templates/ACCEPTANCE_REPORT_TEMPLATE.md` | 阶段验收报告模板 |
 
 ## 全局编码规范
 
