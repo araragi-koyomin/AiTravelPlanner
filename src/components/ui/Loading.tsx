@@ -16,6 +16,8 @@ const Loading = ({ size = 'md', text, className }: LoadingProps) => {
   return (
     <div className={cn('flex flex-col items-center justify-center space-y-2', className)}>
       <div
+        data-testid="loading"
+        data-size={size}
         className={cn(
           'animate-spin rounded-full border-gray-200 border-t-primary-600',
           sizeClasses[size],

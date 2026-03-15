@@ -1,8 +1,11 @@
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Link } from 'react-router-dom'
+import { useAuthStore } from '@/stores/authStore'
 
 export function Home() {
+  const { isAuthenticated } = useAuthStore()
+
   return (
     <div className="container py-12">
       <div className="mx-auto max-w-4xl">
@@ -19,9 +22,11 @@ export function Home() {
           <Button size="lg">
             <Link to="/itineraries/create">创建新行程</Link>
           </Button>
-          <Button variant="outline" size="lg">
-            <Link to="/login">登录</Link>
-          </Button>
+          {!isAuthenticated && (
+            <Button variant="outline" size="lg">
+              <Link to="/login">登录</Link>
+            </Button>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
