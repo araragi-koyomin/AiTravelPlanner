@@ -105,9 +105,13 @@ Project Reference: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 在 SQL Editor 中执行以下 SQL：
 
 ```sql
--- 用户表
+-- ============================================
+-- 用户表（与 auth.users 同步）
+-- ============================================
+-- 注意：id 不使用 DEFAULT，由 auth.users 触发器同步
+
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   name VARCHAR(100),
@@ -116,7 +120,80 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- ============================================
+-- 触发器：auth.users 与 public.users 同步
+-- ============================================
+-- 【重要】必须创建此触发器，否则外键约束会失败
+
+-- 创建触发器函数
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, password, name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.encrypted_password,
+    NEW.raw_user_meta_data->>'name',
+    NEW.created_at,
+    NEW.updated_at
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 更新触发器函数
+CREATE OR REPLACE FUNCTION public.handle_update_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.users
+  SET 
+    email = NEW.email,
+    password = NEW.encrypted_password,
+    name = NEW.raw_user_meta_data->>'name',
+    updated_at = NEW.updated_at
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_updated
+  AFTER UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
+
+-- 删除触发器函数
+CREATE OR REPLACE FUNCTION public.handle_delete_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM public.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_deleted
+  AFTER DELETE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_delete_user();
+
+-- 同步现有用户数据
+INSERT INTO public.users (id, email, password, name, created_at, updated_at)
+SELECT 
+  id,
+  email,
+  encrypted_password,
+  raw_user_meta_data->>'name',
+  created_at,
+  updated_at
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
 -- 行程表
+-- ============================================
 CREATE TABLE itineraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
