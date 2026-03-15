@@ -19,8 +19,6 @@ vi.mock('crypto-js', () => ({
 }))
 
 describe('Crypto Utils', () => {
-  const originalEnv = import.meta.env
-
   beforeEach(() => {
     vi.resetModules()
     mockEncrypt.mockClear()

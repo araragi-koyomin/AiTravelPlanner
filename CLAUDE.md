@@ -82,10 +82,16 @@ AiTravelPlanner/
 
 ### 测试报告
 
-| 报告路径                                      | 用途                 |
-| --------------------------------------------- | -------------------- |
-| `test_report/Task1.3-认证系统开发测试报告.md` | 认证系统开发测试报告 |
-| `test_report/Task1.3-认证系统开发验收报告.md` | 认证系统开发验收报告 |
+| 报告路径                                          | 用途                      |
+| ------------------------------------------------- | ------------------------- |
+| `test_report/Task1.1.md`                          | 项目初始化测试报告        |
+| `test_report/Task1.1_ACCEPTANCE_REPORT.md`        | 项目初始化验收报告        |
+| `test_report/Task1.2.md`                          | Supabase 集成测试报告     |
+| `test_report/Task1.2_ACCEPTANCE_REPORT.md`        | Supabase 集成验收报告     |
+| `test_report/Task1.3-认证系统开发测试报告.md`     | 认证系统开发测试报告      |
+| `test_report/Task1.3-认证系统开发验收报告.md`     | 认证系统开发验收报告      |
+| `test_report/Task1.4-Supabase服务封装测试报告.md` | Supabase 服务封装测试报告 |
+| `test_report/Task1.4-Supabase服务封装验收报告.md` | Supabase 服务封装验收报告 |
 
 ### 文档模板
 
@@ -245,4 +251,4 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-15
+**最后更新**: 2026-03-16

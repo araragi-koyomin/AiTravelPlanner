@@ -7,6 +7,7 @@ import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
 import { Itineraries } from '@/pages/Itineraries'
+import { ItineraryPlanner } from '@/pages/ItineraryPlanner'
 import { SupabaseTest } from '@/pages/SupabaseTest'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -33,6 +34,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Itineraries />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/itineraries/new"
+              element={
+                <ProtectedRoute>
+                  <ItineraryPlanner />
                 </ProtectedRoute>
               }
             />
