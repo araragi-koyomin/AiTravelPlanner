@@ -4,6 +4,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
+import { SupabaseTest } from '@/pages/SupabaseTest'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/supabase-test" element={<SupabaseTest />} />
           </Routes>
         </Layout>
       </Router>

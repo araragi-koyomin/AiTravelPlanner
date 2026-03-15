@@ -65,11 +65,13 @@ AiTravelPlanner/
 
 ### 其他文档
 
-| 文档路径                       | 用途                       |
-| ------------------------------ | -------------------------- |
-| `docs/SECURITY.md`             | 安全规范                   |
-| `docs/DOCKER_DEPLOYMENT.md`    | Docker 部署文档            |
-| `.trae/rules/project_rules.md` | 项目规则（Git 提交规范等） |
+| 文档路径                              | 用途                         |
+| ------------------------------------- | ---------------------------- |
+| `docs/SECURITY.md`                    | 安全规范                     |
+| `docs/DOCKER_DEPLOYMENT.md`           | Docker 部署文档              |
+| `docs/SUPABASE_INTEGRATION.md`        | Supabase 集成文档            |
+| `docs/DATABASE_DEVELOPMENT_ISSUES.md` | 数据库开发常见问题与解决方案 |
+| `.trae/rules/project_rules.md`        | 项目规则（Git 提交规范等）   |
 
 ## 全局编码规范
 
@@ -167,6 +169,7 @@ Scope: `auth`, `itinerary`, `expense`, `map`, `speech`, `ui`, `api`, `db`, `conf
 - ✅ 遵循 `docs/` 中的开发规范
 - ✅ 参考 `docs/` 中的配置指南进行配置
 - ✅ 使用 `docs/PROMPT_TEMPLATES.md` 中的 Prompt 模板
+- ✅ 参考 `docs/DATABASE_DEVELOPMENT_ISSUES.md` 避免常见错误
 
 ### 开发中
 - ✅ 遵循全局编码规范
@@ -221,4 +224,4 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-12
+**最后更新**: 2026-03-15
