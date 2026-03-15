@@ -143,7 +143,7 @@
 
 ```sql
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,  -- 不使用 DEFAULT，由 auth.users 同步
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   name VARCHAR(100),
@@ -153,12 +153,83 @@ CREATE TABLE users (
 );
 ```
 
+#### ⚠️ 重要：与 Supabase Auth 的关系
+
+**Supabase 使用 `auth.users` 表存储认证用户信息，而项目使用 `public.users` 表存储用户资料。**
+
+| 表 | 用途 | 数据来源 |
+|---|---|---|
+| `auth.users` | Supabase 内置认证表 | 用户注册时自动创建 |
+| `public.users` | 项目用户资料表 | 通过触发器从 `auth.users` 同步 |
+
+**必须创建触发器**，在用户注册时自动同步数据到 `public.users` 表，否则外键约束会失败。
+
+#### 触发器函数和触发器
+
+```sql
+-- 创建触发器函数：在 auth.users 创建新用户时，自动在 public.users 中创建对应记录
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, password, name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.encrypted_password,
+    NEW.raw_user_meta_data->>'name',
+    NEW.created_at,
+    NEW.updated_at
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 插入新记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 创建触发器函数：在 auth.users 更新用户时，同步更新 public.users
+CREATE OR REPLACE FUNCTION public.handle_update_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.users
+  SET 
+    email = NEW.email,
+    password = NEW.encrypted_password,
+    name = NEW.raw_user_meta_data->>'name',
+    updated_at = NEW.updated_at
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 更新记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_updated
+  AFTER UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
+
+-- 创建触发器函数：在 auth.users 删除用户时，同步删除 public.users
+CREATE OR REPLACE FUNCTION public.handle_delete_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM public.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 删除记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_deleted
+  AFTER DELETE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_delete_user();
+```
+
 #### 字段说明
 
-- **id**: 使用 UUID 作为主键，避免暴露自增 ID
-- **email**: 唯一索引，用于登录
-- **password**: 存储 bcrypt 哈希值，不存储明文密码
-- **name**: 可选字段，用户昵称
+- **id**: 使用 UUID 作为主键，**与 auth.users.id 保持一致**
+- **email**: 唯一索引，用于登录，**与 auth.users.email 同步**
+- **password**: 存储 bcrypt 哈希值，**与 auth.users.encrypted_password 同步**
+- **name**: 可选字段，用户昵称，**从 auth.users.raw_user_meta_data 同步**
 - **avatar**: 存储头像图片的 URL（Supabase Storage）
 - **created_at**: 记录创建时间
 - **updated_at**: 记录最后更新时间
@@ -843,9 +914,13 @@ supabase migration new create_tables
 ```sql
 -- supabase/migrations/20240312000000_create_tables.sql
 
--- 创建用户表
+-- ============================================
+-- 创建用户表（与 auth.users 同步）
+-- ============================================
+-- 注意：id 不使用 DEFAULT，由 auth.users 触发器同步
+
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   name VARCHAR(100),
@@ -854,7 +929,69 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================
+-- 创建触发器：auth.users 与 public.users 同步
+-- ============================================
+
+-- 创建触发器函数：在 auth.users 创建新用户时，自动在 public.users 中创建对应记录
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, password, name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.encrypted_password,
+    NEW.raw_user_meta_data->>'name',
+    NEW.created_at,
+    NEW.updated_at
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 插入新记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 创建触发器函数：在 auth.users 更新用户时，同步更新 public.users
+CREATE OR REPLACE FUNCTION public.handle_update_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.users
+  SET 
+    email = NEW.email,
+    password = NEW.encrypted_password,
+    name = NEW.raw_user_meta_data->>'name',
+    updated_at = NEW.updated_at
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 更新记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_updated
+  AFTER UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
+
+-- 创建触发器函数：在 auth.users 删除用户时，同步删除 public.users
+CREATE OR REPLACE FUNCTION public.handle_delete_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  DELETE FROM public.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 创建触发器：在 auth.users 删除记录后执行
+CREATE OR REPLACE TRIGGER on_auth_user_deleted
+  AFTER DELETE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_delete_user();
+
+-- ============================================
 -- 创建行程表
+-- ============================================
 CREATE TABLE itineraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
