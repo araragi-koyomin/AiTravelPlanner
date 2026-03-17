@@ -13,6 +13,12 @@ import {
   ItineraryFormData,
   ItineraryFormErrors,
   TravelPreference,
+  TravelersType,
+  AccommodationPreference,
+  PaceType,
+  TravelersTypeLabels,
+  AccommodationPreferenceLabels,
+  PaceTypeLabels,
   getPreferenceLabel,
   DEFAULT_FORM_DATA
 } from '@/types/itinerary'
@@ -143,6 +149,9 @@ export function ItineraryPlanner() {
           participants: Number(formData.participants),
           preferences: formData.preferences,
           specialRequirements: formData.specialRequirements || undefined,
+          travelersType: formData.travelersType,
+          accommodation: formData.accommodation,
+          pace: formData.pace,
           userId: user.id
         })
 
@@ -316,6 +325,59 @@ export function ItineraryPlanner() {
                     {errors.participants}
                   </p>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  人员构成
+                </label>
+                <select
+                  value={formData.travelersType}
+                  onChange={(e) => handleInputChange('travelersType', e.target.value as TravelersType)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  {Object.entries(TravelersTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  住宿偏好
+                </label>
+                <select
+                  value={formData.accommodation}
+                  onChange={(e) => handleInputChange('accommodation', e.target.value as AccommodationPreference)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  {Object.entries(AccommodationPreferenceLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  行程节奏
+                </label>
+                <select
+                  value={formData.pace}
+                  onChange={(e) => handleInputChange('pace', e.target.value as PaceType)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  {Object.entries(PaceTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

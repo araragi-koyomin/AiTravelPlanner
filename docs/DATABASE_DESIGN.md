@@ -66,16 +66,21 @@
                       │ - budget    │       │ - latitude  │
                       │ - partici-  │       │ - longitude │
                       │   pants     │       │ - descrip-  │
-                      │ - prefer-   │       │   tion      │
-                      │   ences     │       │ - cost      │
-                      │ - is_fav-   │       │ - duration  │
-                      │   orite     │       │ - order_idx │
-                      │ - created_at│       │ - created_at│
-                      │ - updated_at│       └─────────────┘
-                      └─────────────┘
-                             │ 1
-                             │
-                             │ N
+                      │ - travelers │       │   tion      │
+                      │   _type     │       │ - cost      │
+                      │ - accommo-  │       │ - duration  │
+                      │   dation    │       │ - order_idx │
+                      │ - pace      │       │ - created_at│
+                      │ - prefer-   │       └─────────────┘
+                      │   ences     │       
+                      │ - is_fav-   │       
+                      │   orite     │       
+                      │ - created_at│       
+                      │ - updated_at│       
+                      └─────────────┘       
+                             │ 1             
+                             │               
+                             │ N             
                       ┌─────────────┐
                       │  expenses   │
                       │             │
@@ -112,12 +117,12 @@
 
 ### 关系说明
 
-| 关系 | 类型 | 说明 |
-|------|------|------|
-| `users` → `itineraries` | 1:N | 一个用户可以有多个行程 |
-| `itineraries` → `itinerary_items` | 1:N | 一个行程可以有多个行程项 |
-| `itineraries` → `expenses` | 1:N | 一个行程可以有多条费用记录 |
-| `users` → `user_settings` | 1:1 | 一个用户对应一条设置记录 |
+| 关系                              | 类型 | 说明                       |
+| --------------------------------- | ---- | -------------------------- |
+| `users` → `itineraries`           | 1:N  | 一个用户可以有多个行程     |
+| `itineraries` → `itinerary_items` | 1:N  | 一个行程可以有多个行程项   |
+| `itineraries` → `expenses`        | 1:N  | 一个行程可以有多条费用记录 |
+| `users` → `user_settings`         | 1:1  | 一个用户对应一条设置记录   |
 
 ---
 
@@ -129,15 +134,15 @@
 
 #### 表结构
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | UUID | PRIMARY KEY | 用户 ID |
-| `email` | VARCHAR(255) | UNIQUE NOT NULL | 邮箱地址 |
-| `password` | VARCHAR(255) | NOT NULL | 密码（哈希） |
-| `name` | VARCHAR(100) | NULL | 用户名 |
-| `avatar` | TEXT | NULL | 头像 URL |
-| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 创建时间 |
-| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | 更新时间 |
+| 字段名       | 类型         | 约束            | 说明         |
+| ------------ | ------------ | --------------- | ------------ |
+| `id`         | UUID         | PRIMARY KEY     | 用户 ID      |
+| `email`      | VARCHAR(255) | UNIQUE NOT NULL | 邮箱地址     |
+| `password`   | VARCHAR(255) | NOT NULL        | 密码（哈希） |
+| `name`       | VARCHAR(100) | NULL            | 用户名       |
+| `avatar`     | TEXT         | NULL            | 头像 URL     |
+| `created_at` | TIMESTAMPTZ  | DEFAULT NOW()   | 创建时间     |
+| `updated_at` | TIMESTAMPTZ  | DEFAULT NOW()   | 更新时间     |
 
 #### SQL 定义
 
@@ -157,10 +162,10 @@ CREATE TABLE users (
 
 **Supabase 使用 `auth.users` 表存储认证用户信息，而项目使用 `public.users` 表存储用户资料。**
 
-| 表 | 用途 | 数据来源 |
-|---|---|---|
-| `auth.users` | Supabase 内置认证表 | 用户注册时自动创建 |
-| `public.users` | 项目用户资料表 | 通过触发器从 `auth.users` 同步 |
+| 表             | 用途                | 数据来源                       |
+| -------------- | ------------------- | ------------------------------ |
+| `auth.users`   | Supabase 内置认证表 | 用户注册时自动创建             |
+| `public.users` | 项目用户资料表      | 通过触发器从 `auth.users` 同步 |
 
 **必须创建触发器**，在用户注册时自动同步数据到 `public.users` 表，否则外键约束会失败。
 
@@ -249,21 +254,24 @@ CREATE INDEX idx_users_created_at ON users(created_at);
 
 #### 表结构
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | UUID | PRIMARY KEY | 行程 ID |
-| `user_id` | UUID | FOREIGN KEY NOT NULL | 用户 ID |
-| `title` | VARCHAR(255) | NOT NULL | 行程标题 |
-| `destination` | VARCHAR(255) | NOT NULL | 目的地 |
-| `start_date` | DATE | NOT NULL | 开始日期 |
-| `end_date` | DATE | NOT NULL | 结束日期 |
-| `budget` | DECIMAL(10, 2) | NOT NULL | 预算 |
-| `participants` | INTEGER | NOT NULL | 参与人数 |
-| `preferences` | TEXT[] | NULL | 偏好标签数组 |
-| `special_requirements` | TEXT | NULL | 特殊需求 |
-| `is_favorite` | BOOLEAN | DEFAULT FALSE | 是否收藏 |
-| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 创建时间 |
-| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | 更新时间 |
+| 字段名                 | 类型           | 约束                 | 说明         |
+| ---------------------- | -------------- | -------------------- | ------------ |
+| `id`                   | UUID           | PRIMARY KEY          | 行程 ID      |
+| `user_id`              | UUID           | FOREIGN KEY NOT NULL | 用户 ID      |
+| `title`                | VARCHAR(255)   | NOT NULL             | 行程标题     |
+| `destination`          | VARCHAR(255)   | NOT NULL             | 目的地       |
+| `start_date`           | DATE           | NOT NULL             | 开始日期     |
+| `end_date`             | DATE           | NOT NULL             | 结束日期     |
+| `budget`               | DECIMAL(10, 2) | NOT NULL             | 预算         |
+| `participants`         | INTEGER        | NOT NULL             | 参与人数     |
+| `travelers_type`       | VARCHAR(50)    | NULL                 | 人员构成类型 |
+| `accommodation_pref`   | VARCHAR(50)    | NULL                 | 住宿偏好     |
+| `pace`                 | VARCHAR(50)    | NULL                 | 行程节奏     |
+| `preferences`          | TEXT[]         | NULL                 | 偏好标签数组 |
+| `special_requirements` | TEXT           | NULL                 | 特殊需求     |
+| `is_favorite`          | BOOLEAN        | DEFAULT FALSE        | 是否收藏     |
+| `created_at`           | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间     |
+| `updated_at`           | TIMESTAMPTZ    | DEFAULT NOW()        | 更新时间     |
 
 #### SQL 定义
 
@@ -277,6 +285,9 @@ CREATE TABLE itineraries (
   end_date DATE NOT NULL,
   budget DECIMAL(10, 2) NOT NULL,
   participants INTEGER NOT NULL,
+  travelers_type VARCHAR(50),
+  accommodation_pref VARCHAR(50),
+  pace VARCHAR(50),
   preferences TEXT[],
   special_requirements TEXT,
   is_favorite BOOLEAN DEFAULT FALSE,
@@ -295,6 +306,21 @@ CREATE TABLE itineraries (
 - **end_date**: 行程结束日期
 - **budget**: 总预算（人民币）
 - **participants**: 参与人数
+- **travelers_type**: 人员构成类型，枚举值：
+  - `adult`: 成人出行
+  - `family`: 亲子游
+  - `couple`: 情侣出游
+  - `friends`: 朋友结伴
+  - `solo`: 独自旅行
+  - `business`: 商务出行
+- **accommodation_pref**: 住宿偏好，枚举值：
+  - `budget`: 经济型
+  - `comfort`: 舒适型
+  - `luxury`: 豪华型
+- **pace**: 行程节奏，枚举值：
+  - `relaxed`: 轻松休闲
+  - `moderate`: 适中节奏
+  - `intense`: 紧凑充实
 - **preferences**: 偏好标签数组，如 `['美食', '动漫', '购物']`
 - **special_requirements**: 特殊需求，如 "需要无障碍设施"
 - **is_favorite**: 是否收藏，用于快速访问
@@ -318,22 +344,22 @@ CREATE INDEX idx_itineraries_destination ON itineraries(destination);
 
 #### 表结构
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | UUID | PRIMARY KEY | 行程项 ID |
-| `itinerary_id` | UUID | FOREIGN KEY NOT NULL | 行程 ID |
-| `date` | DATE | NOT NULL | 日期 |
-| `time` | VARCHAR(10) | NOT NULL | 时间（HH:MM） |
-| `type` | VARCHAR(50) | CHECK NOT NULL | 类型 |
-| `name` | VARCHAR(255) | NOT NULL | 名称 |
-| `address` | VARCHAR(500) | NULL | 地址 |
-| `latitude` | DECIMAL(10, 8) | NULL | 纬度 |
-| `longitude` | DECIMAL(11, 8) | NULL | 经度 |
-| `description` | TEXT | NULL | 描述 |
-| `cost` | DECIMAL(10, 2) | NULL | 费用 |
-| `duration` | INTEGER | NULL | 时长（分钟） |
-| `order_index` | INTEGER | NOT NULL | 排序索引 |
-| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 创建时间 |
+| 字段名         | 类型           | 约束                 | 说明          |
+| -------------- | -------------- | -------------------- | ------------- |
+| `id`           | UUID           | PRIMARY KEY          | 行程项 ID     |
+| `itinerary_id` | UUID           | FOREIGN KEY NOT NULL | 行程 ID       |
+| `date`         | DATE           | NOT NULL             | 日期          |
+| `time`         | VARCHAR(10)    | NOT NULL             | 时间（HH:MM） |
+| `type`         | VARCHAR(50)    | CHECK NOT NULL       | 类型          |
+| `name`         | VARCHAR(255)   | NOT NULL             | 名称          |
+| `address`      | VARCHAR(500)   | NULL                 | 地址          |
+| `latitude`     | DECIMAL(10, 8) | NULL                 | 纬度          |
+| `longitude`    | DECIMAL(11, 8) | NULL                 | 经度          |
+| `description`  | TEXT           | NULL                 | 描述          |
+| `cost`         | DECIMAL(10, 2) | NULL                 | 费用          |
+| `duration`     | INTEGER        | NULL                 | 时长（分钟）  |
+| `order_index`  | INTEGER        | NOT NULL             | 排序索引      |
+| `created_at`   | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间      |
 
 #### SQL 定义
 
@@ -395,15 +421,15 @@ CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
 
 #### 表结构
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | UUID | PRIMARY KEY | 费用记录 ID |
-| `itinerary_id` | UUID | FOREIGN KEY NOT NULL | 行程 ID |
-| `category` | VARCHAR(50) | CHECK NOT NULL | 类别 |
-| `amount` | DECIMAL(10, 2) | NOT NULL | 金额 |
-| `date` | DATE | NOT NULL | 日期 |
-| `description` | TEXT | NULL | 描述 |
-| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 创建时间 |
+| 字段名         | 类型           | 约束                 | 说明        |
+| -------------- | -------------- | -------------------- | ----------- |
+| `id`           | UUID           | PRIMARY KEY          | 费用记录 ID |
+| `itinerary_id` | UUID           | FOREIGN KEY NOT NULL | 行程 ID     |
+| `category`     | VARCHAR(50)    | CHECK NOT NULL       | 类别        |
+| `amount`       | DECIMAL(10, 2) | NOT NULL             | 金额        |
+| `date`         | DATE           | NOT NULL             | 日期        |
+| `description`  | TEXT           | NULL                 | 描述        |
+| `created_at`   | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间    |
 
 #### SQL 定义
 
@@ -451,18 +477,18 @@ CREATE INDEX idx_expenses_date ON expenses(date);
 
 #### 表结构
 
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | UUID | PRIMARY KEY | 设置 ID |
-| `user_id` | UUID | FOREIGN KEY UNIQUE NOT NULL | 用户 ID |
-| `zhipu_api_key` | TEXT | NULL | 智谱AI API Key |
-| `xunfei_api_key` | TEXT | NULL | 科大讯飞 API Key |
-| `amap_api_key` | TEXT | NULL | 高德地图 API Key |
-| `theme` | VARCHAR(10) | CHECK DEFAULT 'light' | 主题 |
-| `language` | VARCHAR(5) | CHECK DEFAULT 'zh' | 语言 |
-| `notifications` | BOOLEAN | DEFAULT TRUE | 通知开关 |
-| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 创建时间 |
-| `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | 更新时间 |
+| 字段名           | 类型        | 约束                        | 说明             |
+| ---------------- | ----------- | --------------------------- | ---------------- |
+| `id`             | UUID        | PRIMARY KEY                 | 设置 ID          |
+| `user_id`        | UUID        | FOREIGN KEY UNIQUE NOT NULL | 用户 ID          |
+| `zhipu_api_key`  | TEXT        | NULL                        | 智谱AI API Key   |
+| `xunfei_api_key` | TEXT        | NULL                        | 科大讯飞 API Key |
+| `amap_api_key`   | TEXT        | NULL                        | 高德地图 API Key |
+| `theme`          | VARCHAR(10) | CHECK DEFAULT 'light'       | 主题             |
+| `language`       | VARCHAR(5)  | CHECK DEFAULT 'zh'          | 语言             |
+| `notifications`  | BOOLEAN     | DEFAULT TRUE                | 通知开关         |
+| `created_at`     | TIMESTAMPTZ | DEFAULT NOW()               | 创建时间         |
+| `updated_at`     | TIMESTAMPTZ | DEFAULT NOW()               | 更新时间         |
 
 #### SQL 定义
 
@@ -617,22 +643,22 @@ WHERE u.id = 'user-uuid';
 
 ### 索引清单
 
-| 表名 | 索引名 | 字段 | 类型 | 说明 |
-|------|--------|------|------|------|
-| `users` | `idx_users_email` | `email` | UNIQUE | 邮箱唯一索引 |
-| `users` | `idx_users_created_at` | `created_at` | INDEX | 按创建时间排序 |
-| `itineraries` | `idx_itineraries_user_id` | `user_id` | INDEX | 查询用户的行程 |
-| `itineraries` | `idx_itineraries_start_date` | `start_date` | INDEX | 按开始日期排序 |
-| `itineraries` | `idx_itineraries_is_favorite` | `is_favorite` | INDEX | 查询收藏的行程 |
-| `itineraries` | `idx_itineraries_destination` | `destination` | INDEX | 按目的地搜索 |
-| `itinerary_items` | `idx_itinerary_items_itinerary_id` | `itinerary_id` | INDEX | 查询行程的行程项 |
-| `itinerary_items` | `idx_itinerary_items_date` | `date` | INDEX | 按日期排序 |
-| `itinerary_items` | `idx_itinerary_items_type` | `type` | INDEX | 按类型筛选 |
-| `itinerary_items` | `idx_itinerary_items_order_index` | `order_index` | INDEX | 按顺序排序 |
-| `expenses` | `idx_expenses_itinerary_id` | `itinerary_id` | INDEX | 查询行程的费用 |
-| `expenses` | `idx_expenses_category` | `category` | INDEX | 按类别分组 |
-| `expenses` | `idx_expenses_date` | `date` | INDEX | 按日期排序 |
-| `user_settings` | `idx_user_settings_user_id` | `user_id` | INDEX | 查询用户设置 |
+| 表名              | 索引名                             | 字段           | 类型   | 说明             |
+| ----------------- | ---------------------------------- | -------------- | ------ | ---------------- |
+| `users`           | `idx_users_email`                  | `email`        | UNIQUE | 邮箱唯一索引     |
+| `users`           | `idx_users_created_at`             | `created_at`   | INDEX  | 按创建时间排序   |
+| `itineraries`     | `idx_itineraries_user_id`          | `user_id`      | INDEX  | 查询用户的行程   |
+| `itineraries`     | `idx_itineraries_start_date`       | `start_date`   | INDEX  | 按开始日期排序   |
+| `itineraries`     | `idx_itineraries_is_favorite`      | `is_favorite`  | INDEX  | 查询收藏的行程   |
+| `itineraries`     | `idx_itineraries_destination`      | `destination`  | INDEX  | 按目的地搜索     |
+| `itinerary_items` | `idx_itinerary_items_itinerary_id` | `itinerary_id` | INDEX  | 查询行程的行程项 |
+| `itinerary_items` | `idx_itinerary_items_date`         | `date`         | INDEX  | 按日期排序       |
+| `itinerary_items` | `idx_itinerary_items_type`         | `type`         | INDEX  | 按类型筛选       |
+| `itinerary_items` | `idx_itinerary_items_order_index`  | `order_index`  | INDEX  | 按顺序排序       |
+| `expenses`        | `idx_expenses_itinerary_id`        | `itinerary_id` | INDEX  | 查询行程的费用   |
+| `expenses`        | `idx_expenses_category`            | `category`     | INDEX  | 按类别分组       |
+| `expenses`        | `idx_expenses_date`                | `date`         | INDEX  | 按日期排序       |
+| `user_settings`   | `idx_user_settings_user_id`        | `user_id`      | INDEX  | 查询用户设置     |
 
 ### 索引创建 SQL
 

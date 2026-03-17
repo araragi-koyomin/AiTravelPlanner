@@ -132,7 +132,10 @@ function generateOptimizationPrompt(params: {
     ? optimizationGoals.map(goal => `- ${goal}`).join('\n')
     : '- 根据用户反馈进行优化'
 
-  return `你是一个专业的旅行规划师，擅长优化旅行计划。
+  // 计算行程天数
+  const daysCount = originalItinerary.dailySchedule.length
+
+  return `你是专业的旅行规划师，擅长优化旅行计划。
 
 ## 任务
 根据用户的反馈，优化现有的旅行计划。
@@ -147,6 +150,20 @@ ${userFeedback}
 
 ## 优化目标
 ${goalsText}
+
+【重要规则】
+1. 只推荐真实存在、知名的景点和餐厅，不要编造不存在的地点
+2. 如果不确定某个地点是否存在，请选择该城市最知名的地标替代
+3. 地址填写大致区域即可，不要编造具体门牌号
+4. 经纬度统一填 0，后续会通过地图API补全
+5. 费用参考当地消费水平估算
+6. 每天必须安排3-5个具体活动，确保每一天都有详细的行程安排
+7. 每一天的 activities 数组不能为空，必须包含具体的活动安排
+
+【行程天数要求】
+- 原始行程共 ${daysCount} 天
+- 优化后的 dailySchedule 数组必须包含 ${daysCount} 个元素
+- 每一天都必须有完整的活动安排，不能只写主题没有活动
 
 ## 输出要求
 请以 JSON 格式返回优化后的旅行计划，格式与原始行程计划相同：
@@ -168,6 +185,12 @@ ${goalsText}
 3. 确保优化后的行程更加合理
 4. 控制预算在用户可接受范围内
 5. 提供优化说明，解释为什么这样修改
+6. 每一天的 activities 数组必须包含3-5个活动，不能为空
+
+【重要提示】
+- 必须保持 ${daysCount} 天的完整行程
+- 每一天的 activities 数组必须包含3-5个活动
+- 不能只写主题不写具体活动
 
 请直接返回 JSON 格式的结果，不要包含其他说明文字。`
 }
@@ -198,7 +221,7 @@ async function callZhipuAI(prompt: string, retryCount = 0): Promise<ZhipuAIRespo
           }
         ],
         temperature: 0.7,
-        max_tokens: 3000,
+        max_tokens: 8192,
         top_p: 0.9
       })
     })

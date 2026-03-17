@@ -63,6 +63,9 @@ export interface Database {
           participants: number
           preferences: string[] | null
           special_requirements: string | null
+          travelers_type: string | null
+          accommodation_pref: string | null
+          pace: string | null
           is_favorite: boolean
           created_at: string
           updated_at: string
@@ -78,6 +81,9 @@ export interface Database {
           participants: number
           preferences?: string[] | null
           special_requirements?: string | null
+          travelers_type?: string | null
+          accommodation_pref?: string | null
+          pace?: string | null
           is_favorite?: boolean
           created_at?: string
           updated_at?: string
@@ -93,6 +99,9 @@ export interface Database {
           participants?: number
           preferences?: string[] | null
           special_requirements?: string | null
+          travelers_type?: string | null
+          accommodation_pref?: string | null
+          pace?: string | null
           is_favorite?: boolean
           created_at?: string
           updated_at?: string

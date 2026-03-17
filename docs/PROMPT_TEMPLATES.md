@@ -68,6 +68,9 @@ const ITINERARY_PLANNING_PROMPT = `
 - 返回日期：{endDate}
 - 预算：{budget} 元
 - 参与人数：{participants} 人
+- 人员构成：{travelersType}
+- 住宿偏好：{accommodation}
+- 行程节奏：{pace}
 - 旅行偏好：{preferences}
 - 特殊需求：{specialRequirements}
 
@@ -94,8 +97,6 @@ const ITINERARY_PLANNING_PROMPT = `
           "type": "transport|accommodation|attraction|restaurant|activity",
           "name": "活动名称",
           "address": "详细地址",
-          "latitude": 纬度,
-          "longitude": 经度,
           "description": "活动描述",
           "cost": 费用,
           "duration": 时长（分钟）,
@@ -151,6 +152,9 @@ async function generateItinerary(params: {
   endDate: string;
   budget: number;
   participants: number;
+  travelersType?: string;
+  accommodation?: string;
+  pace?: string;
   preferences: string[];
   specialRequirements?: string;
 }) {
@@ -160,6 +164,9 @@ async function generateItinerary(params: {
     .replace('{endDate}', params.endDate)
     .replace('{budget}', params.budget.toString())
     .replace('{participants}', params.participants.toString())
+    .replace('{travelersType}', params.travelersType || '未指定')
+    .replace('{accommodation}', params.accommodation || '未指定')
+    .replace('{pace}', params.pace || '适中')
     .replace('{preferences}', params.preferences.join('、'))
     .replace('{specialRequirements}', params.specialRequirements || '无');
 

@@ -410,14 +410,14 @@ npm run dev
 ```
   VITE v5.x.x  ready in xxx ms
 
-  ➜  Local:   http://localhost:5173/
+  ➜  Local:   http://localhost:3000/
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
 ```
 
 ### 4. 访问应用
 
-打开浏览器访问：http://localhost:5173
+打开浏览器访问：http://localhost:3000
 
 **预期结果**：
 - 如果项目有代码，应该看到应用界面
@@ -464,22 +464,22 @@ npm uninstall -g pnpm
 npm install -g pnpm@latest
 ```
 
-### 问题 2：端口 5173 已被占用
+### 问题 2：端口 3000 已被占用
 
 **错误信息**：
 ```
-Error: listen EADDRINUSE: address already in use :::5173
+Error: listen EADDRINUSE: address already in use :::3000
 ```
 
 **解决方案**：
 
 ```bash
 # Windows: 查找占用端口的进程
-netstat -ano | findstr :5173
+netstat -ano | findstr :3000
 taskkill /PID <PID> /F
 
 # macOS/Linux: 查找占用端口的进程
-lsof -ti:5173 | xargs kill -9
+lsof -ti:3000 | xargs kill -9
 
 # 或使用其他端口
 pnpm dev -- --port 3000
