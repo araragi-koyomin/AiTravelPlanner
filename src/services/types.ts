@@ -23,12 +23,16 @@ export interface Itinerary {
   updated_at: string
 }
 
+export type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
+
+export type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+
 export interface ItineraryItem {
   id: string
   itinerary_id: string
   date: string
   time: string
-  type: 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity'
+  type: ActivityType
   name: string
   address: string
   latitude: number | null
@@ -43,7 +47,7 @@ export interface ItineraryItem {
 export interface Expense {
   id: string
   itinerary_id: string
-  category: 'transport' | 'accommodation' | 'food' | 'tickets' | 'shopping' | 'other'
+  category: ExpenseCategory
   amount: number
   date: string
   description: string | null

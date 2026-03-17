@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ItineraryPlanner } from './ItineraryPlanner'
 import { TravelPreference } from '@/types/itinerary'
+import { generateItinerary } from '@/services/ai'
+import { supabase } from '@/services/supabase'
 
 const mockNavigate = vi.fn()
 
@@ -15,10 +17,79 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+vi.mock('@/services/ai', () => ({
+  generateItinerary: vi.fn(),
+  getAIErrorMessage: vi.fn((error: unknown) => {
+    if (error instanceof Error) return error.message
+    return '未知错误'
+  })
+}))
+
+vi.mock('@/services/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn(),
+      refreshSession: vi.fn()
+    }
+  }
+}))
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn(() => ({
+    user: { id: 'test-user-id', email: 'test@example.com' },
+    isAuthenticated: true
+  }))
+}))
+
+const mockItineraryResult = {
+  success: true,
+  itinerary: {
+    id: 'test-itinerary-id',
+    user_id: 'test-user-id',
+    destination: '日本东京',
+    start_date: '2024-05-01',
+    end_date: '2024-05-05',
+    budget: 10000,
+    participants: 2,
+    preferences: ['food'],
+    special_requirements: null,
+    daily_schedule: [],
+    budget_breakdown: {
+      transport: 2000,
+      accommodation: 3000,
+      food: 2000,
+      tickets: 1500,
+      shopping: 1000,
+      other: 500,
+      total: 10000
+    },
+    tips: [],
+    emergency_contacts: {
+      police: '110',
+      hospital: '120',
+      embassy: ''
+    },
+    status: 'draft',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  }
+}
+
 describe('ItineraryPlanner', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    vi.mocked(generateItinerary).mockResolvedValue(mockItineraryResult)
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { session: { access_token: 'test-token', refresh_token: 'test-refresh-token', expires_in: 3600, token_type: 'bearer', user: { id: 'test-user-id', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '2024-01-01T00:00:00Z' } } } as any,
+      error: null
+    })
+    vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { session: { access_token: 'test-token', refresh_token: 'test-refresh-token', expires_in: 3600, token_type: 'bearer', user: { id: 'test-user-id', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '2024-01-01T00:00:00Z' } } } as any,
+      error: null
+    })
   })
 
   afterEach(() => {
@@ -332,11 +403,17 @@ describe('ItineraryPlanner', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/itineraries')
+        expect(mockNavigate).toHaveBeenCalledWith('/itineraries/test-itinerary-id')
       }, { timeout: 3000 })
     })
 
     it('应该显示加载状态当提交中', async () => {
+      let resolvePromise: (value: typeof mockItineraryResult) => void
+      const pendingPromise = new Promise<typeof mockItineraryResult>((resolve) => {
+        resolvePromise = resolve
+      })
+      vi.mocked(generateItinerary).mockReturnValue(pendingPromise as Promise<typeof mockItineraryResult>)
+
       const user = userEvent.setup()
       render(
         <MemoryRouter>
@@ -367,8 +444,10 @@ describe('ItineraryPlanner', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: '生成中...' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'AI 正在生成行程...' })).toBeInTheDocument()
       })
+
+      resolvePromise!(mockItineraryResult)
     })
   })
 

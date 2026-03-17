@@ -92,6 +92,10 @@ AiTravelPlanner/
 | `test_report/Task1.3-认证系统开发验收报告.md`     | 认证系统开发验收报告      |
 | `test_report/Task1.4-Supabase服务封装测试报告.md` | Supabase 服务封装测试报告 |
 | `test_report/Task1.4-Supabase服务封装验收报告.md` | Supabase 服务封装验收报告 |
+| `test_report/Task2.1-需求输入功能测试报告.md`     | 需求输入功能测试报告      |
+| `test_report/Task2.1-需求输入功能验收报告.md`     | 需求输入功能验收报告      |
+| `test_report/Task2.2-AI行程生成集成测试报告.md`   | AI 行程生成集成测试报告   |
+| `test_report/Task2.2-AI行程生成集成验收报告.md`   | AI 行程生成集成验收报告   |
 
 ### 文档模板
 
@@ -251,4 +255,4 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-16
+**最后更新**: 2026-03-17

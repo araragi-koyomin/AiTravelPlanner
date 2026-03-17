@@ -7,7 +7,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+})
+
+export type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
+
+export type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
 
 export interface Database {
   public: {
@@ -94,7 +104,7 @@ export interface Database {
           itinerary_id: string
           date: string
           time: string
-          type: 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity'
+          type: ActivityType
           name: string
           address: string | null
           latitude: number | null
@@ -110,7 +120,7 @@ export interface Database {
           itinerary_id: string
           date: string
           time: string
-          type: 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity'
+          type: ActivityType
           name: string
           address?: string | null
           latitude?: number | null
@@ -126,7 +136,7 @@ export interface Database {
           itinerary_id?: string
           date?: string
           time?: string
-          type?: 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity'
+          type?: ActivityType
           name?: string
           address?: string | null
           latitude?: number | null
@@ -142,7 +152,7 @@ export interface Database {
         Row: {
           id: string
           itinerary_id: string
-          category: 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+          category: ExpenseCategory
           amount: number
           date: string
           description: string | null
@@ -151,7 +161,7 @@ export interface Database {
         Insert: {
           id?: string
           itinerary_id: string
-          category: 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+          category: ExpenseCategory
           amount: number
           date: string
           description?: string | null
@@ -160,7 +170,7 @@ export interface Database {
         Update: {
           id?: string
           itinerary_id?: string
-          category?: 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+          category?: ExpenseCategory
           amount?: number
           date?: string
           description?: string | null
