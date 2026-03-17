@@ -1,11 +1,11 @@
-import { supabase, TablesInsert, TablesUpdate, TablesRow, SupabaseErrorClass } from './supabase'
+import { supabase, TablesInsert, TablesUpdate, TablesRow, SupabaseErrorClass, ExpenseCategory } from './supabase'
 
 export type Expense = TablesRow<'expenses'>
 export type ExpenseInsert = TablesInsert<'expenses'>
 export type ExpenseUpdate = TablesUpdate<'expenses'>
 
 export interface ExpenseQueryOptions {
-  category?: 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+  category?: ExpenseCategory
   startDate?: string
   endDate?: string
   orderBy?: 'date' | 'amount'

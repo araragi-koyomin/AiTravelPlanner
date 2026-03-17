@@ -17,11 +17,15 @@ import {
   DEFAULT_FORM_DATA
 } from '@/types/itinerary'
 import { validateItineraryForm, isFormValid } from '@/utils/itineraryValidation'
+import { generateItinerary, getAIErrorMessage } from '@/services/ai'
+import { useAuthStore } from '@/stores/authStore'
+import { supabase } from '@/services/supabase'
 
 const FORM_STORAGE_KEY = 'itineraryFormData'
 
 export function ItineraryPlanner() {
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuthStore()
   const [formData, setFormData] = useState<ItineraryFormData>(DEFAULT_FORM_DATA)
   const [errors, setErrors] = useState<ItineraryFormErrors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -88,6 +92,30 @@ export function ItineraryPlanner() {
     async (e: React.FormEvent) => {
       e.preventDefault()
 
+      if (!isAuthenticated || !user) {
+        setSubmitError('请先登录后再生成行程')
+        navigate('/login')
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setSubmitError('登录状态已过期，请重新登录')
+        navigate('/login')
+        return
+      }
+
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError || !refreshedSession) {
+        console.error('刷新 session 失败:', refreshError)
+        setSubmitError('登录状态已过期，请重新登录')
+        navigate('/login')
+        return
+      }
+
+      console.log('当前用户 ID:', user.id)
+      console.log('Session access_token 存在:', !!refreshedSession.access_token)
+
       const validationErrors = validateItineraryForm(formData)
       setErrors(validationErrors)
       setTouched({
@@ -107,19 +135,31 @@ export function ItineraryPlanner() {
       setSubmitError(null)
 
       try {
-        console.log('生成行程:', formData)
+        const result = await generateItinerary({
+          destination: formData.destination,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          budget: Number(formData.budget),
+          participants: Number(formData.participants),
+          preferences: formData.preferences,
+          specialRequirements: formData.specialRequirements || undefined,
+          userId: user.id
+        })
 
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        navigate('/itineraries')
+        if (result.success && result.itinerary) {
+          localStorage.removeItem(FORM_STORAGE_KEY)
+          navigate(`/itineraries/${result.itinerary.id}`)
+        } else {
+          setSubmitError(result.error || '生成行程失败，请稍后重试')
+        }
       } catch (error) {
         console.error('生成行程失败:', error)
-        setSubmitError('生成行程失败，请稍后重试')
+        setSubmitError(getAIErrorMessage(error))
       } finally {
         setIsSubmitting(false)
       }
     },
-    [formData, navigate]
+    [formData, navigate, isAuthenticated, user]
   )
 
   const handleReset = useCallback(() => {
@@ -336,12 +376,17 @@ export function ItineraryPlanner() {
             </div>
 
             <div className="flex space-x-4 pt-4">
+              {!isAuthenticated && (
+                <p className="text-sm text-amber-600 w-full mb-2">
+                  请先 <button type="button" onClick={() => navigate('/login')} className="text-primary-500 hover:underline">登录</button> 后再生成行程
+                </p>
+              )}
               <Button
                 type="submit"
-                disabled={!isFormValid(errors, formData) || isSubmitting}
+                disabled={!isFormValid(errors, formData) || isSubmitting || !isAuthenticated}
                 className="flex-1"
               >
-                {isSubmitting ? '生成中...' : '生成行程'}
+                {isSubmitting ? 'AI 正在生成行程...' : '生成行程'}
               </Button>
               <Button type="button" variant="outline" onClick={handleReset}>
                 重置

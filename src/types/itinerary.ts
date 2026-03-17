@@ -74,9 +74,20 @@ export interface DailySchedule {
   activities: Activity[]
 }
 
+export type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
+
+export const ActivityTypeLabels: Record<ActivityType, string> = {
+  transport: '交通',
+  accommodation: '住宿',
+  attraction: '景点',
+  restaurant: '餐厅',
+  activity: '活动',
+  shopping: '购物'
+}
+
 export interface Activity {
   time: string
-  type: 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity'
+  type: ActivityType
   name: string
   address: string
   latitude?: number
