@@ -78,7 +78,7 @@
 pnpm dev
 ```
 
-访问测试页面：`http://localhost:5173/supabase-test`
+访问测试页面：`http://localhost:3000/supabase-test`
 
 ---
 
@@ -188,7 +188,7 @@ pnpm dev
 
 ### 2. 访问测试页面
 
-在浏览器中打开：`http://localhost:5173/supabase-test`
+在浏览器中打开：`http://localhost:3000/supabase-test`
 
 ### 3. 执行测试
 
@@ -515,7 +515,7 @@ supabase db reset --db-url "postgresql://postgres:[password]@db.[project-ref].su
 
 **解决方案**:
 1. 在 Supabase Dashboard 中进入 **Authentication** > **URL Configuration**
-2. 添加你的本地开发 URL：`http://localhost:5173`
+2. 添加你的本地开发 URL：`http://localhost:3000`
 3. 保存设置
 
 ### 问题 3: 认证失败

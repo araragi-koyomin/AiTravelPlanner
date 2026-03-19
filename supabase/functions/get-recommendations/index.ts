@@ -122,7 +122,7 @@ function generateRecommendationPrompt(params: {
     ? preferences.map(p => preferenceLabels[p] || p).join('、')
     : '无特别偏好'
 
-  return `你是一个专业的景点推荐师，擅长根据用户偏好推荐合适的景点。
+  return `你是专业的景点推荐师，擅长根据用户偏好推荐合适的景点。
 
 ## 任务
 根据用户的信息，推荐合适的景点。
@@ -134,6 +134,13 @@ function generateRecommendationPrompt(params: {
 - 预算：${budget} 元
 - 参与人数：${participants} 人
 
+【重要规则】
+1. 只推荐真实存在、知名的景点，不要编造不存在的地点
+2. 如果不确定某个景点是否存在，请选择该城市最知名的地标替代
+3. 地址填写大致区域即可，不要编造具体门牌号
+4. 经纬度统一填 0，后续会通过地图API补全
+5. 门票价格参考官方价格或常见票价
+
 ## 输出要求
 请以 JSON 格式返回推荐结果，包含以下字段：
 
@@ -141,17 +148,17 @@ function generateRecommendationPrompt(params: {
 {
   "recommendations": [
     {
-      "name": "景点名称",
+      "name": "真实景点名称",
       "type": "natural|cultural|entertainment|shopping|other",
       "description": "景点描述",
-      "address": "详细地址",
-      "latitude": 纬度,
-      "longitude": 经度,
+      "address": "城市区域",
+      "latitude": 0,
+      "longitude": 0,
       "openingHours": "开放时间",
       "ticketPrice": 门票价格,
       "recommendedDuration": 推荐游览时长（小时）,
       "bestTimeToVisit": "最佳游览时间",
-      "tips": ["小贴士1", "小贴士2"],
+      "tips": ["实用小贴士1", "实用小贴士2"],
       "matchScore": 匹配度（0-1）
     }
   ],

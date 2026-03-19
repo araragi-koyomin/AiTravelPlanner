@@ -17,36 +17,54 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
 
-export type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
+export type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'entertainment' | 'other'
+
+export type ItineraryStatus = 'draft' | 'generated' | 'in_progress' | 'completed' | 'archived'
+
+export type PaymentMethod = 'cash' | 'credit_card' | 'debit_card' | 'alipay' | 'wechat' | 'other'
+
+export interface LocationData {
+  address: string
+  lat: number
+  lng: number
+  poi_id?: string
+  city?: string
+  district?: string
+}
+
+export interface UserPreferences {
+  favorite_destinations?: string[]
+  travel_style?: string[]
+  budget_preference?: string
+  accommodation_type?: string[]
+  diet_restrictions?: string[]
+}
 
 export interface Database {
   public: {
     Tables: {
-      users: {
+      user_profiles: {
         Row: {
           id: string
-          email: string
-          password: string
-          name: string | null
-          avatar: string | null
+          username: string | null
+          avatar_url: string | null
+          preferences: UserPreferences | null
           created_at: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          email: string
-          password: string
-          name?: string | null
-          avatar?: string | null
+          id: string
+          username?: string | null
+          avatar_url?: string | null
+          preferences?: UserPreferences | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          email?: string
-          password?: string
-          name?: string | null
-          avatar?: string | null
+          username?: string | null
+          avatar_url?: string | null
+          preferences?: UserPreferences | null
           created_at?: string
           updated_at?: string
         }
@@ -63,7 +81,12 @@ export interface Database {
           participants: number
           preferences: string[] | null
           special_requirements: string | null
+          travelers_type: string | null
+          accommodation_pref: string | null
+          pace: string | null
           is_favorite: boolean
+          status: ItineraryStatus
+          cover_image: string | null
           created_at: string
           updated_at: string
         }
@@ -78,7 +101,12 @@ export interface Database {
           participants: number
           preferences?: string[] | null
           special_requirements?: string | null
+          travelers_type?: string | null
+          accommodation_pref?: string | null
+          pace?: string | null
           is_favorite?: boolean
+          status?: ItineraryStatus
+          cover_image?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -93,7 +121,12 @@ export interface Database {
           participants?: number
           preferences?: string[] | null
           special_requirements?: string | null
+          travelers_type?: string | null
+          accommodation_pref?: string | null
+          pace?: string | null
           is_favorite?: boolean
+          status?: ItineraryStatus
+          cover_image?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -102,49 +135,49 @@ export interface Database {
         Row: {
           id: string
           itinerary_id: string
-          date: string
+          day: number
           time: string
           type: ActivityType
           name: string
-          address: string | null
-          latitude: number | null
-          longitude: number | null
+          location: LocationData
           description: string | null
           cost: number | null
           duration: number | null
-          order_index: number
+          tips: string | null
+          image_url: string | null
+          order_idx: number
           created_at: string
         }
         Insert: {
           id?: string
           itinerary_id: string
-          date: string
+          day: number
           time: string
           type: ActivityType
           name: string
-          address?: string | null
-          latitude?: number | null
-          longitude?: number | null
+          location: LocationData
           description?: string | null
           cost?: number | null
           duration?: number | null
-          order_index: number
+          tips?: string | null
+          image_url?: string | null
+          order_idx: number
           created_at?: string
         }
         Update: {
           id?: string
           itinerary_id?: string
-          date?: string
+          day?: number
           time?: string
           type?: ActivityType
           name?: string
-          address?: string | null
-          latitude?: number | null
-          longitude?: number | null
+          location?: LocationData
           description?: string | null
           cost?: number | null
           duration?: number | null
-          order_index?: number
+          tips?: string | null
+          image_url?: string | null
+          order_idx?: number
           created_at?: string
         }
       }
@@ -154,7 +187,10 @@ export interface Database {
           itinerary_id: string
           category: ExpenseCategory
           amount: number
-          date: string
+          expense_date: string
+          payment_method: PaymentMethod | null
+          receipt_url: string | null
+          notes: string | null
           description: string | null
           created_at: string
         }
@@ -163,7 +199,10 @@ export interface Database {
           itinerary_id: string
           category: ExpenseCategory
           amount: number
-          date: string
+          expense_date: string
+          payment_method?: PaymentMethod | null
+          receipt_url?: string | null
+          notes?: string | null
           description?: string | null
           created_at?: string
         }
@@ -172,7 +211,10 @@ export interface Database {
           itinerary_id?: string
           category?: ExpenseCategory
           amount?: number
-          date?: string
+          expense_date?: string
+          payment_method?: PaymentMethod | null
+          receipt_url?: string | null
+          notes?: string | null
           description?: string | null
           created_at?: string
         }

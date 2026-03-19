@@ -20,6 +20,43 @@ export const TravelPreferenceLabels: Record<TravelPreference, string> = {
   [TravelPreference.NIGHTLIFE]: '夜生活'
 }
 
+export type TravelersType = 'adult' | 'family' | 'couple' | 'friends' | 'solo' | 'business'
+
+export const TravelersTypeLabels: Record<TravelersType, string> = {
+  adult: '成人出行',
+  family: '亲子游',
+  couple: '情侣出游',
+  friends: '朋友结伴',
+  solo: '独自旅行',
+  business: '商务出行'
+}
+
+export type AccommodationPreference = 'budget' | 'comfort' | 'luxury'
+
+export const AccommodationPreferenceLabels: Record<AccommodationPreference, string> = {
+  budget: '经济型',
+  comfort: '舒适型',
+  luxury: '豪华型'
+}
+
+export type PaceType = 'relaxed' | 'moderate' | 'intense'
+
+export const PaceTypeLabels: Record<PaceType, string> = {
+  relaxed: '轻松',
+  moderate: '适中',
+  intense: '紧凑'
+}
+
+export type ItineraryStatus = 'draft' | 'generated' | 'in_progress' | 'completed' | 'archived'
+
+export const ItineraryStatusLabels: Record<ItineraryStatus, string> = {
+  draft: '草稿',
+  generated: '已生成',
+  in_progress: '进行中',
+  completed: '已完成',
+  archived: '已归档'
+}
+
 export interface ItineraryRequest {
   destination: string
   startDate: string
@@ -28,6 +65,9 @@ export interface ItineraryRequest {
   participants: number
   preferences: TravelPreference[]
   specialRequirements?: string
+  travelersType?: TravelersType
+  accommodation?: AccommodationPreference
+  pace?: PaceType
 }
 
 export interface ItineraryFormData {
@@ -38,6 +78,9 @@ export interface ItineraryFormData {
   participants: string
   preferences: TravelPreference[]
   specialRequirements: string
+  travelersType: TravelersType
+  accommodation: AccommodationPreference
+  pace: PaceType
 }
 
 export interface ItineraryFormErrors {
@@ -47,6 +90,15 @@ export interface ItineraryFormErrors {
   budget?: string
   participants?: string
   preferences?: string
+}
+
+export interface LocationData {
+  address: string
+  lat: number
+  lng: number
+  poi_id?: string
+  city?: string
+  district?: string
 }
 
 export interface AIItineraryResponse {
@@ -68,6 +120,7 @@ export interface AIItineraryResponse {
 }
 
 export interface DailySchedule {
+  day: number
   date: string
   dayOfWeek: string
   theme: string
@@ -89,13 +142,12 @@ export interface Activity {
   time: string
   type: ActivityType
   name: string
-  address: string
-  latitude?: number
-  longitude?: number
+  location: LocationData
   description: string
   cost: number
   duration: number
   tips: string
+  image_url?: string
 }
 
 export interface BudgetBreakdown {
@@ -104,8 +156,49 @@ export interface BudgetBreakdown {
   food: number
   tickets: number
   shopping: number
+  entertainment: number
   other: number
   total: number
+}
+
+export interface ItineraryItemBase {
+  id: string
+  itinerary_id: string
+  day: number
+  time: string
+  type: ActivityType
+  name: string
+  location: LocationData
+  description: string | null
+  cost: number | null
+  duration: number | null
+  tips: string | null
+  image_url: string | null
+  order_idx: number
+  created_at: string
+}
+
+export interface DailyScheduleWithItems {
+  day: number
+  date: string
+  dayOfWeek: string
+  theme: string
+  items: ItineraryItemBase[]
+}
+
+export const DAY_OF_WEEK_LABELS: Record<number, string> = {
+  0: '星期日',
+  1: '星期一',
+  2: '星期二',
+  3: '星期三',
+  4: '星期四',
+  5: '星期五',
+  6: '星期六'
+}
+
+export function getDayOfWeekLabel(dateString: string): string {
+  const date = new Date(dateString)
+  return DAY_OF_WEEK_LABELS[date.getDay()]
 }
 
 export function getPreferenceLabel(preference: TravelPreference): string {
@@ -123,5 +216,8 @@ export const DEFAULT_FORM_DATA: ItineraryFormData = {
   budget: '',
   participants: '',
   preferences: [],
-  specialRequirements: ''
+  specialRequirements: '',
+  travelersType: 'adult',
+  accommodation: 'comfort',
+  pace: 'moderate'
 }

@@ -192,7 +192,11 @@ export async function duplicateItinerary(
       participants: originalItinerary.participants,
       preferences: originalItinerary.preferences,
       special_requirements: originalItinerary.special_requirements,
-      is_favorite: false
+      travelers_type: originalItinerary.travelers_type,
+      accommodation_pref: originalItinerary.accommodation_pref,
+      pace: originalItinerary.pace,
+      is_favorite: false,
+      status: 'draft'
     }
 
     const newItinerary = await createItinerary(newItineraryData)
@@ -209,17 +213,17 @@ export async function duplicateItinerary(
     if (items && items.length > 0) {
       const newItems = items.map(item => ({
         itinerary_id: newItinerary.id,
-        date: item.date,
+        day: item.day,
         time: item.time,
         type: item.type,
         name: item.name,
-        address: item.address,
-        latitude: item.latitude,
-        longitude: item.longitude,
+        location: item.location,
         description: item.description,
         cost: item.cost,
         duration: item.duration,
-        order_index: item.order_index
+        tips: item.tips,
+        image_url: item.image_url,
+        order_idx: item.order_idx
       }))
 
       await supabase.from('itinerary_items').insert(newItems)
@@ -239,7 +243,10 @@ export async function duplicateItinerary(
         itinerary_id: newItinerary.id,
         category: expense.category,
         amount: expense.amount,
-        date: expense.date,
+        expense_date: expense.expense_date,
+        payment_method: expense.payment_method,
+        receipt_url: expense.receipt_url,
+        notes: expense.notes,
         description: expense.description
       }))
 
@@ -385,4 +392,120 @@ export async function searchItineraries(
     console.error('搜索行程失败:', error)
     throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('搜索行程失败')
   }
+}
+
+export type ItineraryItem = TablesRow<'itinerary_items'>
+
+export async function getItineraryItems(itineraryId: string): Promise<ItineraryItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('itinerary_items')
+      .select('*')
+      .eq('itinerary_id', itineraryId)
+      .order('day', { ascending: true })
+      .order('order_idx', { ascending: true })
+
+    if (error) {
+      throw new SupabaseErrorClass(`获取行程项失败: ${error.message}`, error.code)
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('获取行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('获取行程项失败')
+  }
+}
+
+export interface DailyScheduleBuilt {
+  day: number
+  date: string
+  dayOfWeek: string
+  theme: string
+  items: ItineraryItem[]
+}
+
+export function buildDailySchedule(
+  startDate: string,
+  endDate: string,
+  items: ItineraryItem[]
+): DailyScheduleBuilt[] {
+  const schedule: DailyScheduleBuilt[] = []
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const dayThemes = ['探索之旅', '文化体验', '休闲时光', '美食之旅', '自然风光', '购物狂欢', '告别之旅']
+
+  const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+  for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
+    const currentDate = new Date(start)
+    currentDate.setDate(start.getDate() + dayIndex)
+    const dateString = currentDate.toISOString().split('T')[0]
+    const dayOfWeek = getDayOfWeekLabel(dateString)
+    const dayNumber = dayIndex + 1
+    const dayItems = items.filter(item => item.day === dayNumber)
+
+    schedule.push({
+      day: dayNumber,
+      date: dateString,
+      dayOfWeek,
+      theme: dayThemes[dayIndex % dayThemes.length],
+      items: dayItems
+    })
+  }
+
+  return schedule
+}
+
+export function buildBudgetBreakdown(items: ItineraryItem[]): {
+  transport: number
+  accommodation: number
+  food: number
+  tickets: number
+  shopping: number
+  entertainment: number
+  other: number
+  total: number
+} {
+  const breakdown = {
+    transport: 0,
+    accommodation: 0,
+    food: 0,
+    tickets: 0,
+    shopping: 0,
+    entertainment: 0,
+    other: 0,
+    total: 0
+  }
+
+  const typeToCategory: Record<string, keyof typeof breakdown> = {
+    transport: 'transport',
+    accommodation: 'accommodation',
+    restaurant: 'food',
+    attraction: 'tickets',
+    shopping: 'shopping',
+    activity: 'entertainment'
+  }
+
+  for (const item of items) {
+    const category = typeToCategory[item.type] || 'other'
+    const itemCost = item.cost || 0
+    breakdown[category] += itemCost
+    breakdown.total += itemCost
+  }
+
+  return breakdown
+}
+
+function getDayOfWeekLabel(dateString: string): string {
+  const DAY_OF_WEEK_LABELS: Record<number, string> = {
+    0: '星期日',
+    1: '星期一',
+    2: '星期二',
+    3: '星期三',
+    4: '星期四',
+    5: '星期五',
+    6: '星期六'
+  }
+  const date = new Date(dateString)
+  return DAY_OF_WEEK_LABELS[date.getDay()]
 }

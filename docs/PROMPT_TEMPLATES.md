@@ -68,6 +68,9 @@ const ITINERARY_PLANNING_PROMPT = `
 - 返回日期：{endDate}
 - 预算：{budget} 元
 - 参与人数：{participants} 人
+- 人员构成：{travelersType}
+- 住宿偏好：{accommodation}
+- 行程节奏：{pace}
 - 旅行偏好：{preferences}
 - 特殊需求：{specialRequirements}
 
@@ -85,21 +88,26 @@ const ITINERARY_PLANNING_PROMPT = `
   },
   "dailySchedule": [
     {
-      "date": "YYYY-MM-DD",
-      "dayOfWeek": "星期几",
+      "day": 1,
       "theme": "当日主题",
       "activities": [
         {
           "time": "HH:MM",
-          "type": "transport|accommodation|attraction|restaurant|activity",
+          "type": "transport|accommodation|attraction|restaurant|activity|shopping",
           "name": "活动名称",
-          "address": "详细地址",
-          "latitude": 纬度,
-          "longitude": 经度,
+          "location": {
+            "address": "详细地址",
+            "lat": 纬度,
+            "lng": 经度,
+            "poi_id": "POI唯一标识（可选）",
+            "city": "城市",
+            "district": "区县"
+          },
           "description": "活动描述",
           "cost": 费用,
           "duration": 时长（分钟）,
-          "tips": "小贴士"
+          "tips": "游玩建议",
+          "image_url": "图片URL（可选）"
         }
       ]
     }
@@ -133,6 +141,8 @@ const ITINERARY_PLANNING_PROMPT = `
 5. 提供实用的小贴士和注意事项
 6. 确保所有费用都是合理的市场价格
 7. 如果预算不足，优先保证核心体验
+8. day 字段从 1 开始，表示行程的第几天
+9. location 必须包含 address、lat、lng 字段
 
 ## 注意事项
 - 考虑当地的天气和季节因素
@@ -151,6 +161,9 @@ async function generateItinerary(params: {
   endDate: string;
   budget: number;
   participants: number;
+  travelersType?: string;
+  accommodation?: string;
+  pace?: string;
   preferences: string[];
   specialRequirements?: string;
 }) {
@@ -160,6 +173,9 @@ async function generateItinerary(params: {
     .replace('{endDate}', params.endDate)
     .replace('{budget}', params.budget.toString())
     .replace('{participants}', params.participants.toString())
+    .replace('{travelersType}', params.travelersType || '未指定')
+    .replace('{accommodation}', params.accommodation || '未指定')
+    .replace('{pace}', params.pace || '适中')
     .replace('{preferences}', params.preferences.join('、'))
     .replace('{specialRequirements}', params.specialRequirements || '无');
 
@@ -559,11 +575,13 @@ const EXPENSE_PARSING_PROMPT = `
 
 \`\`\`json
 {
-  "category": "transport|accommodation|food|ticket|shopping|other",
+  "category": "transport|accommodation|food|ticket|shopping|entertainment|other",
   "amount": 金额,
   "currency": "货币",
-  "date": "YYYY-MM-DD",
+  "expense_date": "YYYY-MM-DD",
+  "payment_method": "cash|credit_card|debit_card|alipay|wechat|other",
   "description": "费用描述",
+  "notes": "备注信息",
   "details": {
     "item": "项目名称",
     "quantity": 数量,
@@ -580,13 +598,14 @@ const EXPENSE_PARSING_PROMPT = `
 1. 准确识别费用类别
 2. 提取金额和货币信息
 3. 推断费用日期（如果未明确说明）
-4. 提供详细的费用明细
-5. 评估解析的置信度
-6. 提供实用的建议
+4. 识别支付方式（如果提及）
+5. 提供详细的费用明细
+6. 评估解析的置信度
+7. 提供实用的建议
 
 ## 示例
 
-输入："今天中午在东京塔附近的拉面店吃了一碗拉面，花了1200日元"
+输入："今天中午在东京塔附近的拉面店吃了一碗拉面，花了1200日元，用支付宝付的"
 
 输出：
 \`\`\`json
@@ -594,8 +613,10 @@ const EXPENSE_PARSING_PROMPT = `
   "category": "food",
   "amount": 1200,
   "currency": "JPY",
-  "date": "2024-04-01",
+  "expense_date": "2024-04-01",
+  "payment_method": "alipay",
   "description": "东京塔附近拉面店午餐",
+  "notes": null,
   "details": {
     "item": "拉面",
     "quantity": 1,
@@ -632,7 +653,7 @@ const EXPENSE_CLASSIFICATION_PROMPT = `
 
 \`\`\`json
 {
-  "category": "transport|accommodation|food|ticket|shopping|other",
+  "category": "transport|accommodation|food|ticket|shopping|entertainment|other",
   "subcategory": "子类别",
   "confidence": 置信度（0-1）,
   "reasoning": "分类理由",
@@ -651,6 +672,7 @@ const EXPENSE_CLASSIFICATION_PROMPT = `
 - **food**: 餐饮费用（餐厅、小吃、饮料等）
 - **ticket**: 门票费用（景点门票、演出门票等）
 - **shopping**: 购物费用（纪念品、服装、电子产品等）
+- **entertainment**: 娱乐费用（游乐园、演出、电影等）
 - **other**: 其他费用（签证、保险、小费等）
 
 ## 约束条件

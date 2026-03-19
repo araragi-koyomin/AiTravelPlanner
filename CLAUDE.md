@@ -96,6 +96,8 @@ AiTravelPlanner/
 | `test_report/Task2.1-需求输入功能验收报告.md`     | 需求输入功能验收报告      |
 | `test_report/Task2.2-AI行程生成集成测试报告.md`   | AI 行程生成集成测试报告   |
 | `test_report/Task2.2-AI行程生成集成验收报告.md`   | AI 行程生成集成验收报告   |
+| `test_report/Task2.3-行程展示功能测试报告.md`     | 行程展示功能测试报告      |
+| `test_report/Task2.3-行程展示功能验收报告.md`     | 行程展示功能验收报告      |
 
 ### 文档模板
 
@@ -255,4 +257,40 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-17
+**最后更新**: 2026-03-20
+
+## 数据库重构说明
+
+### 已完成的重构（2026-03-19 ~ 2026-03-20）
+
+1. **用户表重构**：`users` 表替换为 `user_profiles` 表，直接关联 `auth.users`
+2. **行程表扩展**：添加 `status`、`cover_image` 字段
+3. **行程项表重构**：
+   - `date` 字段替换为 `day` 字段（第几天，从1开始）
+   - `address`、`latitude`、`longitude` 合并为 `location` JSONB 字段
+   - `order_index` 重命名为 `order_idx`
+   - 添加 `tips`、`image_url` 字段
+4. **费用表扩展**：添加 `payment_method`、`receipt_url`、`notes` 字段
+5. **AI Prompt 模板提取**：从 Edge Function 中提取到 `supabase/functions/_shared/prompts/` 目录
+
+### 迁移脚本
+
+| 版本 | 文件 | 说明 |
+|------|------|------|
+| 004 | `004_drop_users_table.sql` | 删除 users 表 |
+| 005 | `005_create_user_profiles.sql` | 创建 user_profiles 表 |
+| 006 | `006_alter_itineraries.sql` | 修改 itineraries 表 |
+| 007 | `007_alter_itinerary_items.sql` | 重构 itinerary_items 表 |
+| 008 | `008_alter_expenses.sql` | 扩展 expenses 表 |
+| 009 | `009_create_indexes.sql` | 创建优化索引 |
+| 010 | `010_verify_migration.sql` | 验证迁移 |
+| 011 | `011_fix_deprecated_columns.sql` | 修复废弃列 NOT NULL |
+| 012 | `012_fix_remaining_deprecated_columns.sql` | 修复剩余废弃列 |
+
+### 废弃列状态
+
+以下列已移除 NOT NULL 约束，但仍保留在数据库中（向后兼容）：
+- `itinerary_items`: `date`, `order_index`, `address`, `latitude`, `longitude`
+- `expenses`: `date`
+
+后续清理时可直接删除这些列。

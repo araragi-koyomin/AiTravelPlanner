@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { buildItineraryPrompt, SYSTEM_PROMPT } from '../_shared/prompts/itinerary.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,9 @@ interface ItineraryRequest {
   preferences: string[]
   specialRequirements?: string
   userId: string
+  travelersType?: string
+  accommodation?: string
+  pace?: string
 }
 
 interface ZhipuAIResponse {
@@ -32,54 +36,106 @@ interface ZhipuAIResponse {
 
 type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
 
-interface Activity {
-  time: string
-  type: ActivityType
-  name: string
+interface LocationData {
   address: string
-  latitude?: number
-  longitude?: number
+  lat: number
+  lng: number
+  poi_id?: string
+  city?: string
+  district?: string
+}
+
+interface AIResponseItem {
+  time: string
+  type: string
+  title: string
   description: string
+  location: LocationData | string
+  duration?: string
   cost: number
-  duration: number
-  tips: string
+  ticket_info?: string
+  opening_hours?: string
+  tips?: string
+  cuisine?: string
+  recommended_dishes?: string[]
 }
 
-interface DailySchedule {
-  date: string
-  dayOfWeek: string
+interface AIDailyItinerary {
+  day: number
   theme: string
-  activities: Activity[]
+  items: AIResponseItem[]
 }
 
-interface BudgetBreakdown {
-  transport: number
+interface AIAccommodation {
+  day: number
+  hotel_name: string
+  location: LocationData | string
+  price_range: string
+  rating?: string
+  features?: string[]
+  booking_tips?: string
+}
+
+interface AITransportation {
+  to_destination?: {
+    method: string
+    details: string
+    estimated_cost: number
+    duration: string
+  }
+  local_transport?: {
+    recommendation: string
+    daily_cost: number
+    tips: string
+  }
+  return?: {
+    method: string
+    estimated_cost: number
+  }
+}
+
+interface AIBudgetBreakdown {
+  transportation: number
   accommodation: number
   food: number
   tickets: number
   shopping: number
+  entertainment?: number
   other: number
-  total: number
 }
 
-interface EmergencyContacts {
-  police: string
-  hospital: string
-  embassy: string
-}
-
-interface GeneratedItinerary {
-  summary: {
-    destination: string
-    duration: string
-    totalBudget: number
-    participants: number
-    estimatedCost: number
+interface AIGeneratedItinerary {
+  trip_title: string
+  summary: string
+  highlights: string[]
+  total_days: number
+  daily_itinerary: AIDailyItinerary[]
+  accommodation: AIAccommodation[]
+  transportation: AITransportation
+  budget_breakdown: AIBudgetBreakdown
+  total_estimated_cost: number
+  packing_list: string[]
+  travel_tips: string[]
+  emergency_contacts: {
+    police: string
+    hospital: string
+    tourist_hotline: string
   }
-  dailySchedule: DailySchedule[]
-  budgetBreakdown: BudgetBreakdown
-  tips: string[]
-  emergencyContacts: EmergencyContacts
+}
+
+interface DbActivity {
+  itinerary_id: string
+  day: number
+  time: string
+  type: ActivityType
+  name: string
+  location: LocationData
+  description: string
+  cost: number
+  duration: number
+  tips: string | null
+  image_url: string | null
+  order_idx: number
 }
 
 serve(async (req) => {
@@ -88,7 +144,32 @@ serve(async (req) => {
   }
 
   try {
-    const data: ItineraryRequest = await req.json()
+    const contentType = req.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return new Response(
+        JSON.stringify({ success: false, error: '请求 Content-Type 必须是 application/json' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const bodyText = await req.text()
+    if (!bodyText || bodyText.trim() === '') {
+      return new Response(
+        JSON.stringify({ success: false, error: '请求体不能为空' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let data: ItineraryRequest
+    try {
+      data = JSON.parse(bodyText)
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: '请求体 JSON 格式无效' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const {
       destination,
       startDate,
@@ -97,28 +178,48 @@ serve(async (req) => {
       participants,
       preferences,
       specialRequirements,
-      userId
+      userId,
+      travelersType,
+      accommodation,
+      pace
     } = data
 
     if (!destination || !startDate || !endDate || !budget || !participants || !userId) {
       return new Response(
+        JSON.stringify({ success: false, error: '缺少必填字段' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const daysCount = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+    if (daysCount > 10) {
+      return new Response(
         JSON.stringify({
           success: false,
-          error: '缺少必填字段'
+          error: '行程天数不能超过10天，建议分段规划'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const itinerary = await generateItinerary({
+    const aiResponse = await callZhipuAI(buildItineraryPrompt({
       destination,
       startDate,
       endDate,
+      daysCount,
       budget,
       participants,
       preferences: preferences || [],
-      specialRequirements
-    })
+      specialRequirements,
+      travelersType,
+      accommodation,
+      pace
+    }))
+
+    const itinerary = parseAIResponse(aiResponse)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -129,14 +230,18 @@ serve(async (req) => {
       .from('itineraries')
       .insert({
         user_id: userId,
-        title: `${destination} ${itinerary.summary.duration}游`,
+        title: itinerary.trip_title || `${destination} ${daysCount}日游`,
         destination,
         start_date: startDate,
         end_date: endDate,
         budget,
         participants,
         preferences,
-        special_requirements: specialRequirements
+        special_requirements: specialRequirements,
+        travelers_type: travelersType,
+        accommodation_pref: accommodation,
+        pace,
+        status: 'generated'
       })
       .select()
       .single()
@@ -147,67 +252,26 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: `保存行程失败: ${saveError.message}`,
-          itinerary: itinerary
+          itinerary
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const itineraryId = savedItinerary.id
+    const dbActivities = transformToDbFormat(itinerary, itineraryId, daysCount)
 
-    const itineraryItems = []
-    let orderIndex = 0
-    for (const day of itinerary.dailySchedule) {
-      for (const activity of day.activities) {
-        itineraryItems.push({
-          itinerary_id: itineraryId,
-          date: day.date,
-          time: activity.time,
-          type: activity.type,
-          name: activity.name,
-          address: activity.address,
-          latitude: activity.latitude,
-          longitude: activity.longitude,
-          description: activity.description,
-          cost: activity.cost,
-          duration: activity.duration,
-          order_index: orderIndex++
-        })
-      }
-    }
-
-    if (itineraryItems.length > 0) {
+    if (dbActivities.length > 0) {
       const { error: itemsError } = await supabase
         .from('itinerary_items')
-        .insert(itineraryItems)
+        .insert(dbActivities)
 
       if (itemsError) {
         console.error('保存行程项失败:', itemsError)
       }
     }
 
-    const expenses = []
-    const expenseCategories: Record<string, string> = {
-      'transport': 'transport',
-      'accommodation': 'accommodation',
-      'food': 'food',
-      'tickets': 'ticket',
-      'shopping': 'shopping',
-      'other': 'other'
-    }
-
-    for (const [key, value] of Object.entries(itinerary.budgetBreakdown)) {
-      if (key !== 'total' && typeof value === 'number' && value > 0) {
-        expenses.push({
-          itinerary_id: itineraryId,
-          category: expenseCategories[key] || 'other',
-          amount: value,
-          date: startDate,
-          description: `${key} 预算`
-        })
-      }
-    }
-
+    const expenses = buildExpenses(itinerary.budget_breakdown, itineraryId, startDate)
     if (expenses.length > 0) {
       const { error: expensesError } = await supabase
         .from('expenses')
@@ -223,10 +287,15 @@ serve(async (req) => {
         success: true,
         itinerary: {
           ...savedItinerary,
-          daily_schedule: itinerary.dailySchedule,
-          budget_breakdown: itinerary.budgetBreakdown,
-          tips: itinerary.tips,
-          emergency_contacts: itinerary.emergencyContacts
+          daily_schedule: itinerary.daily_itinerary,
+          budget_breakdown: itinerary.budget_breakdown,
+          total_estimated_cost: itinerary.total_estimated_cost,
+          highlights: itinerary.highlights,
+          tips: itinerary.travel_tips,
+          packing_list: itinerary.packing_list,
+          emergency_contacts: itinerary.emergency_contacts,
+          accommodation: itinerary.accommodation,
+          transportation: itinerary.transportation
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -236,187 +305,241 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || '生成行程失败，请稍后重试'
+        error: error instanceof Error ? error.message : '生成行程失败，请稍后重试'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
-function generateItineraryPrompt(params: {
-  destination: string
-  startDate: string
-  endDate: string
-  budget: number
-  participants: number
-  preferences: string[]
-  specialRequirements?: string
-}): string {
-  const { destination, startDate, endDate, budget, participants, preferences, specialRequirements } = params
-
-  const preferenceLabels: Record<string, string> = {
-    'food': '美食',
-    'attraction': '景点',
-    'shopping': '购物',
-    'culture': '文化',
-    'nature': '自然',
-    'anime': '动漫',
-    'history': '历史',
-    'nightlife': '夜生活'
-  }
-
-  const preferenceText = preferences.length > 0
-    ? preferences.map(p => preferenceLabels[p] || p).join('、')
-    : '无特别偏好'
-
-  return `你是旅行规划师。根据以下信息生成简洁的旅行计划。
-
-目的地：${destination}
-日期：${startDate} 至 ${endDate}
-预算：${budget} 元
-人数：${participants} 人
-偏好：${preferenceText || '无'}
-特殊需求：${specialRequirements || '无'}
-
-返回 JSON 格式：
-{
-  "summary": {
-    "destination": "目的地",
-    "duration": "X天",
-    "totalBudget": ${budget},
-    "participants": ${participants},
-    "estimatedCost": 预估费用
-  },
-  "dailySchedule": [
-    {
-      "date": "YYYY-MM-DD",
-      "dayOfWeek": "星期X",
-      "theme": "主题",
-      "activities": [
-        {"time": "HH:MM", "type": "transport|accommodation|attraction|restaurant|activity|shopping", "name": "名称", "address": "地址", "latitude": 0, "longitude": 0, "description": "描述", "cost": 0, "duration": 60, "tips": "提示"}
-      ]
-    }
-  ],
-  "budgetBreakdown": {"transport": 0, "accommodation": 0, "food": 0, "tickets": 0, "shopping": 0, "other": 0, "total": 0},
-  "tips": ["建议1", "建议2"],
-  "emergencyContacts": {"police": "110", "hospital": "120", "embassy": "电话"}
-}
-
-要求：
-1. 每天最多4个活动
-2. 预算不超${budget}元
-3. 直接返回JSON，不要其他文字`
-}
-
-async function callZhipuAI(prompt: string, retryCount = 0): Promise<ZhipuAIResponse> {
+async function callZhipuAI(prompt: string): Promise<string> {
   const apiKey = Deno.env.get('ZHIPU_API_KEY')
   if (!apiKey) {
     throw new Error('ZHIPU_API_KEY 环境变量未配置')
   }
 
-  try {
-    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'glm-4-flash',
-        messages: [
-          {
-            role: 'system',
-            content: '你是旅行规划师，只返回JSON格式结果。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 3000,
-        top_p: 0.9
-      })
+  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'glm-4-flash',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.5,
+      max_tokens: 8192,
+      top_p: 0.9
     })
+  })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(`智谱AI API 错误: ${errorData.error?.message || response.statusText}`)
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`智谱AI API 错误: ${errorData.error?.message || response.statusText}`)
+  }
+
+  const data: ZhipuAIResponse = await response.json()
+
+  if (data.error) {
+    throw new Error(`智谱AI API 错误: ${data.error.message}`)
+  }
+
+  return data.choices[0]?.message?.content || ''
+}
+
+function parseAIResponse(content: string): AIGeneratedItinerary {
+  let jsonStr = content
+
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1].trim()
+  } else {
+    const jsonObjectMatch = content.match(/\{[\s\S]*\}/)
+    if (jsonObjectMatch) {
+      jsonStr = jsonObjectMatch[0]
     }
+  }
 
-    const data: ZhipuAIResponse = await response.json()
+  jsonStr = jsonStr
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/,\s*]/g, ']')
+    .replace(/,\s*}/g, '}')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
-    if (data.error) {
-      throw new Error(`智谱AI API 错误: ${data.error.message}`)
-    }
-
-    return data
-  } catch (error) {
-    if (retryCount === 0) {
-      console.log('第一次调用失败，正在重试...')
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      return callZhipuAI(prompt, retryCount + 1)
-    }
-    throw error
+  try {
+    return JSON.parse(jsonStr) as AIGeneratedItinerary
+  } catch (e) {
+    console.error('JSON 解析失败:', e)
+    console.error('原始内容:', content.substring(0, 500))
+    console.error('处理后内容:', jsonStr.substring(0, 500))
+    throw new Error('AI 响应格式解析失败，请重试')
   }
 }
 
-async function generateItinerary(params: {
-  destination: string
-  startDate: string
-  endDate: string
-  budget: number
-  participants: number
-  preferences: string[]
-  specialRequirements?: string
-}): Promise<GeneratedItinerary> {
-  const prompt = generateItineraryPrompt(params)
+function parseLocation(location: LocationData | string | undefined): LocationData {
+  if (!location) {
+    return { address: '', lat: 0, lng: 0 }
+  }
+  if (typeof location === 'string') {
+    return { address: location, lat: 0, lng: 0 }
+  }
+  return {
+    address: location.address || '',
+    lat: location.lat || 0,
+    lng: location.lng || 0,
+    poi_id: location.poi_id,
+    city: location.city,
+    district: location.district
+  }
+}
 
-  console.log('开始调用智谱 AI...')
-  const response = await callZhipuAI(prompt)
-  console.log('智谱 AI 调用完成')
+function transformToDbFormat(
+  itinerary: AIGeneratedItinerary,
+  itineraryId: string,
+  daysCount: number
+): DbActivity[] {
+  const activities: DbActivity[] = []
+  let orderIndex = 0
 
-  const content = response.choices[0].message.content
-  console.log('AI 响应内容长度:', content?.length || 0)
-  console.log('AI 响应前 500 字符:', content?.substring(0, 500))
+  for (let day = 1; day <= daysCount; day++) {
+    const dayItinerary = itinerary.daily_itinerary?.find(d => d.day === day)
 
-  let itinerary: GeneratedItinerary
-  try {
-    let jsonString = content
+    if (dayItinerary?.items) {
+      for (const item of dayItinerary.items) {
+        const normalizedType = normalizeActivityType(item.type)
 
-    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
-    if (jsonMatch) {
-      jsonString = jsonMatch[1]
-    } else {
-      const jsonObjectMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonObjectMatch) {
-        jsonString = jsonObjectMatch[0]
+        activities.push({
+          itinerary_id: itineraryId,
+          day: day,
+          time: item.time || '09:00',
+          type: normalizedType,
+          name: item.title || '未命名活动',
+          location: parseLocation(item.location),
+          description: item.description || '',
+          cost: parseCost(item.cost),
+          duration: parseDuration(item.duration),
+          tips: item.tips || null,
+          image_url: null,
+          order_idx: orderIndex++
+        })
       }
     }
 
-    console.log('尝试解析 JSON，长度:', jsonString?.length || 0)
-
-    jsonString = jsonString
-      .replace(/\/\/[^\n]*/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/,\s*]/g, ']')
-      .replace(/,\s*}/g, '}')
-      .replace(/[\x00-\x1F\x7F]/g, (char) => {
-        if (char === '\n' || char === '\r' || char === '\t') return char
-        return ''
+    const dayAccommodation = itinerary.accommodation?.find(a => a.day === day)
+    if (dayAccommodation) {
+      activities.push({
+        itinerary_id: itineraryId,
+        day: day,
+        time: '18:00',
+        type: 'accommodation',
+        name: dayAccommodation.hotel_name || '住宿',
+        location: parseLocation(dayAccommodation.location),
+        description: `${dayAccommodation.price_range || ''} ${dayAccommodation.features?.join('、') || ''}`.trim(),
+        cost: parsePriceRange(dayAccommodation.price_range),
+        duration: 0,
+        tips: dayAccommodation.booking_tips || null,
+        image_url: null,
+        order_idx: orderIndex++
       })
-
-    itinerary = JSON.parse(jsonString)
-  } catch (error) {
-    console.error('解析 AI 响应失败:', error)
-    console.error('原始响应:', content)
-    throw new Error('解析 AI 响应失败，请重试')
+    }
   }
 
-  if (!itinerary.summary || !itinerary.dailySchedule || !itinerary.budgetBreakdown) {
-    console.error('AI 响应格式不正确:', itinerary)
-    throw new Error('AI 响应格式不正确，请重试')
+  return activities
+}
+
+function normalizeActivityType(type: string): ActivityType {
+  const typeMap: Record<string, ActivityType> = {
+    'attraction': 'attraction',
+    'restaurant': 'restaurant',
+    'food': 'restaurant',
+    'transport': 'transport',
+    'transportation': 'transport',
+    'accommodation': 'accommodation',
+    'hotel': 'accommodation',
+    'activity': 'activity',
+    'shopping': 'shopping'
+  }
+  return typeMap[type?.toLowerCase()] || 'activity'
+}
+
+function parseCost(cost: unknown): number {
+  if (typeof cost === 'number') return cost
+  if (typeof cost === 'string') {
+    const match = cost.match(/[\d.]+/)
+    return match ? parseFloat(match[0]) : 0
+  }
+  return 0
+}
+
+function parseDuration(duration: unknown): number {
+  if (typeof duration === 'number') return duration
+  if (typeof duration === 'string') {
+    const hourMatch = duration.match(/(\d+)\s*小时/)
+    if (hourMatch) return parseInt(hourMatch[1]) * 60
+
+    const minuteMatch = duration.match(/(\d+)\s*分钟/)
+    if (minuteMatch) return parseInt(minuteMatch[1])
+
+    const numMatch = duration.match(/(\d+)/)
+    if (numMatch) return parseInt(numMatch[1])
+  }
+  return 0
+}
+
+function parsePriceRange(priceRange: string | undefined): number {
+  if (!priceRange) return 0
+  const match = priceRange.match(/(\d+)/)
+  return match ? parseInt(match[1]) : 0
+}
+
+function buildExpenses(
+  budgetBreakdown: AIBudgetBreakdown | undefined,
+  itineraryId: string,
+  startDate: string
+): Array<{
+  itinerary_id: string
+  category: string
+  amount: number
+  expense_date: string
+  description: string
+}> {
+  if (!budgetBreakdown) return []
+
+  const categoryMap: Record<string, string> = {
+    'transportation': 'transport',
+    'accommodation': 'accommodation',
+    'food': 'food',
+    'tickets': 'ticket',
+    'shopping': 'shopping',
+    'entertainment': 'entertainment',
+    'other': 'other'
   }
 
-  return itinerary
+  const expenses: Array<{
+    itinerary_id: string
+    category: string
+    amount: number
+    expense_date: string
+    description: string
+  }> = []
+
+  for (const [key, value] of Object.entries(budgetBreakdown)) {
+    if (key && value > 0) {
+      expenses.push({
+        itinerary_id: itineraryId,
+        category: categoryMap[key] || 'other',
+        amount: value,
+        expense_date: startDate,
+        description: `${key} 预算`
+      })
+    }
+  }
+
+  return expenses
 }

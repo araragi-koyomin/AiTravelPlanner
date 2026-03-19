@@ -1,8 +1,26 @@
-export interface User {
+import type { 
+  ActivityType, 
+  ExpenseCategory, 
+  ItineraryStatus, 
+  PaymentMethod,
+  LocationData,
+  UserPreferences 
+} from './supabase'
+
+export type { 
+  ActivityType, 
+  ExpenseCategory, 
+  ItineraryStatus, 
+  PaymentMethod,
+  LocationData,
+  UserPreferences
+}
+
+export interface UserProfile {
   id: string
-  email: string
-  name: string | null
-  avatar: string | null
+  username: string | null
+  avatar_url: string | null
+  preferences: UserPreferences | null
   created_at: string
   updated_at: string
 }
@@ -16,30 +34,31 @@ export interface Itinerary {
   end_date: string
   budget: number
   participants: number
-  preferences: string[]
+  preferences: string[] | null
   special_requirements: string | null
+  travelers_type: string | null
+  accommodation_pref: string | null
+  pace: string | null
   is_favorite: boolean
+  status: ItineraryStatus
+  cover_image: string | null
   created_at: string
   updated_at: string
 }
 
-export type ActivityType = 'transport' | 'accommodation' | 'attraction' | 'restaurant' | 'activity' | 'shopping'
-
-export type ExpenseCategory = 'transport' | 'accommodation' | 'food' | 'ticket' | 'shopping' | 'other'
-
 export interface ItineraryItem {
   id: string
   itinerary_id: string
-  date: string
+  day: number
   time: string
   type: ActivityType
   name: string
-  address: string
-  latitude: number | null
-  longitude: number | null
+  location: LocationData
   description: string | null
-  cost: number
-  duration: number
+  cost: number | null
+  duration: number | null
+  tips: string | null
+  image_url: string | null
   order_idx: number
   created_at: string
 }
@@ -49,7 +68,10 @@ export interface Expense {
   itinerary_id: string
   category: ExpenseCategory
   amount: number
-  date: string
+  expense_date: string
+  payment_method: PaymentMethod | null
+  receipt_url: string | null
+  notes: string | null
   description: string | null
   created_at: string
 }
@@ -57,9 +79,12 @@ export interface Expense {
 export interface UserSettings {
   id: string
   user_id: string
-  default_budget: number
-  default_participants: number
-  preferences: string[]
+  zhipu_api_key: string | null
+  xunfei_api_key: string | null
+  amap_api_key: string | null
+  theme: 'light' | 'dark'
+  language: 'zh' | 'en'
+  notifications: boolean
   created_at: string
   updated_at: string
 }

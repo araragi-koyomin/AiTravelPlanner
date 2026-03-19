@@ -8,7 +8,7 @@ import {
   validateItineraryForm,
   isFormValid
 } from './itineraryValidation'
-import { TravelPreference, ItineraryFormData, ItineraryFormErrors } from '@/types/itinerary'
+import { TravelPreference, ItineraryFormData, ItineraryFormErrors, DEFAULT_FORM_DATA } from '@/types/itinerary'
 
 describe('validateDestination', () => {
   it('应该验证有效的目的地', () => {
@@ -282,13 +282,13 @@ describe('validateItineraryForm', () => {
 
   it('应该验证完整的有效表单', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '日本东京',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [TravelPreference.FOOD, TravelPreference.ATTRACTION],
-      specialRequirements: ''
+      preferences: [TravelPreference.FOOD, TravelPreference.ATTRACTION]
     }
 
     const errors = validateItineraryForm(formData)
@@ -297,13 +297,13 @@ describe('validateItineraryForm', () => {
 
   it('应该返回多个错误当表单有多个错误', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '',
       startDate: '',
       endDate: '',
       budget: '',
       participants: '',
-      preferences: [],
-      specialRequirements: ''
+      preferences: []
     }
 
     const errors = validateItineraryForm(formData)
@@ -317,13 +317,13 @@ describe('validateItineraryForm', () => {
 
   it('应该返回单个错误当表单有单个错误', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '东',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [TravelPreference.FOOD],
-      specialRequirements: ''
+      preferences: [TravelPreference.FOOD]
     }
 
     const errors = validateItineraryForm(formData)
@@ -337,6 +337,7 @@ describe('validateItineraryForm', () => {
 
   it('应该验证包含特殊需求的有效表单', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '日本东京',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
@@ -365,13 +366,13 @@ describe('isFormValid', () => {
 
   it('应该返回 true 当表单有效', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '日本东京',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [TravelPreference.FOOD],
-      specialRequirements: ''
+      preferences: [TravelPreference.FOOD]
     }
 
     const errors: ItineraryFormErrors = {}
@@ -380,13 +381,13 @@ describe('isFormValid', () => {
 
   it('应该返回 false 当表单有错误', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '日本东京',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [TravelPreference.FOOD],
-      specialRequirements: ''
+      preferences: [TravelPreference.FOOD]
     }
 
     const errors: ItineraryFormErrors = {
@@ -397,13 +398,13 @@ describe('isFormValid', () => {
 
   it('应该返回 false 当表单有未填写的必填字段', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '',
       startDate: '',
       endDate: '',
       budget: '',
       participants: '',
-      preferences: [],
-      specialRequirements: ''
+      preferences: []
     }
 
     const errors: ItineraryFormErrors = {}
@@ -412,13 +413,13 @@ describe('isFormValid', () => {
 
   it('应该返回 false 当目的地为空格', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '   ',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [TravelPreference.FOOD],
-      specialRequirements: ''
+      preferences: [TravelPreference.FOOD]
     }
 
     const errors: ItineraryFormErrors = {}
@@ -427,13 +428,13 @@ describe('isFormValid', () => {
 
   it('应该返回 false 当偏好为空数组', () => {
     const formData: ItineraryFormData = {
+      ...DEFAULT_FORM_DATA,
       destination: '日本东京',
       startDate: tomorrowStr,
       endDate: dayAfterTomorrowStr,
       budget: '10000',
       participants: '2',
-      preferences: [],
-      specialRequirements: ''
+      preferences: []
     }
 
     const errors: ItineraryFormErrors = {}

@@ -11,7 +11,7 @@ export default defineConfig({
   },
   envPrefix: 'VITE_',
   server: {
-    port: 5173,
+    port: 3000,
     open: true,
   },
   build: {
