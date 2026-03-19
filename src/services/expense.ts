@@ -1,4 +1,4 @@
-import { supabase, TablesInsert, TablesUpdate, TablesRow, SupabaseErrorClass, ExpenseCategory } from './supabase'
+import { supabase, TablesInsert, TablesUpdate, TablesRow, SupabaseErrorClass, ExpenseCategory, PaymentMethod } from './supabase'
 
 export type Expense = TablesRow<'expenses'>
 export type ExpenseInsert = TablesInsert<'expenses'>
@@ -8,7 +8,8 @@ export interface ExpenseQueryOptions {
   category?: ExpenseCategory
   startDate?: string
   endDate?: string
-  orderBy?: 'date' | 'amount'
+  paymentMethod?: PaymentMethod
+  orderBy?: 'expense_date' | 'amount'
   orderDirection?: 'asc' | 'desc'
   limit?: number
   offset?: number
@@ -67,11 +68,15 @@ export async function getExpenses(
     }
 
     if (options?.startDate) {
-      query = query.gte('date', options.startDate)
+      query = query.gte('expense_date', options.startDate)
     }
 
     if (options?.endDate) {
-      query = query.lte('date', options.endDate)
+      query = query.lte('expense_date', options.endDate)
+    }
+
+    if (options?.paymentMethod) {
+      query = query.eq('payment_method', options.paymentMethod)
     }
 
     if (options?.orderBy) {
@@ -220,7 +225,7 @@ export async function getExpenseStats(
 
     const amountByDate: Record<string, number> = {}
     expenses.forEach(expense => {
-      amountByDate[expense.date] = (amountByDate[expense.date] || 0) + expense.amount
+      amountByDate[expense.expense_date] = (amountByDate[expense.expense_date] || 0) + expense.amount
     })
 
     const uniqueDates = Object.keys(amountByDate).length

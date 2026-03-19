@@ -60,6 +60,7 @@ const mockItineraryResult = {
       food: 2000,
       tickets: 1500,
       shopping: 1000,
+      entertainment: 0,
       other: 500,
       total: 10000
     },

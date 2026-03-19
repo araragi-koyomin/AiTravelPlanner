@@ -1,6 +1,10 @@
 import { supabase } from './supabase'
-import type { AuthUser, AuthSession } from './supabase'
+import type { AuthUser, AuthSession, TablesRow, TablesInsert, TablesUpdate } from './supabase'
 import { handleSupabaseError, SupabaseErrorClass } from './supabase'
+
+export type UserProfile = TablesRow<'user_profiles'>
+export type UserProfileInsert = TablesInsert<'user_profiles'>
+export type UserProfileUpdate = TablesUpdate<'user_profiles'>
 
 export interface SignInCredentials {
   email: string
@@ -193,4 +197,109 @@ export function getAuthErrorMessage(error: unknown): string {
   }
 
   return '操作失败，请稍后重试'
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw handleSupabaseError(error)
+    }
+
+    return data
+  } catch (error) {
+    console.error('获取用户资料失败:', error)
+    throw handleSupabaseError(error)
+  }
+}
+
+export async function createUserProfile(profileData: UserProfileInsert): Promise<UserProfile> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert(profileData)
+      .select()
+      .single()
+
+    if (error) {
+      throw handleSupabaseError(error)
+    }
+
+    if (!data) {
+      throw new SupabaseErrorClass('创建用户资料失败')
+    }
+
+    return data
+  } catch (error) {
+    console.error('创建用户资料失败:', error)
+    throw handleSupabaseError(error)
+  }
+}
+
+export async function updateUserProfile(userId: string, profileData: UserProfileUpdate): Promise<UserProfile> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(profileData)
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      throw handleSupabaseError(error)
+    }
+
+    if (!data) {
+      throw new SupabaseErrorClass('更新用户资料失败')
+    }
+
+    return data
+  } catch (error) {
+    console.error('更新用户资料失败:', error)
+    throw handleSupabaseError(error)
+  }
+}
+
+export async function upsertUserProfile(profileData: UserProfileInsert): Promise<UserProfile> {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .upsert(profileData)
+      .select()
+      .single()
+
+    if (error) {
+      throw handleSupabaseError(error)
+    }
+
+    if (!data) {
+      throw new SupabaseErrorClass('保存用户资料失败')
+    }
+
+    return data
+  } catch (error) {
+    console.error('保存用户资料失败:', error)
+    throw handleSupabaseError(error)
+  }
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return null
+    }
+    return await getUserProfile(user.id)
+  } catch (error) {
+    console.error('获取当前用户资料失败:', error)
+    return null
+  }
 }

@@ -1,6 +1,6 @@
 import type { DailyScheduleBuilt, ItineraryItem } from '@/services/itinerary'
 import { ActivityTypeLabels } from '@/types/itinerary'
-import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign } from 'lucide-react'
+import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign, Lightbulb } from 'lucide-react'
 
 interface TimelineViewProps {
   dailySchedule: DailyScheduleBuilt[]
@@ -18,7 +18,7 @@ export function TimelineView({ dailySchedule, expandedDays, onToggleDay }: Timel
           <div key={day.date} className="relative">
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-bold text-xl shadow-lg">
-                {day.date.slice(8, 10)}
+                D{day.day}
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">{day.theme}</h3>
@@ -83,16 +83,22 @@ function TimelineItemCard({ item }: TimelineItemCardProps) {
         <h4 className="font-semibold text-gray-900 mb-2">
           {item.name}
         </h4>
-        {item.address && (
+        {item.location?.address && (
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
             <MapPin className="h-4 w-4" />
-            <span>{item.address}</span>
+            <span>{item.location.address}</span>
           </div>
         )}
         {item.description && (
           <p className="text-sm text-gray-600 mb-3">
             {item.description}
           </p>
+        )}
+        {item.tips && (
+          <div className="flex items-start gap-2 text-sm text-amber-700 mb-3 bg-amber-50 p-2 rounded">
+            <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <span>{item.tips}</span>
+          </div>
         )}
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1">

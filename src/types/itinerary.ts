@@ -47,6 +47,16 @@ export const PaceTypeLabels: Record<PaceType, string> = {
   intense: '紧凑'
 }
 
+export type ItineraryStatus = 'draft' | 'generated' | 'in_progress' | 'completed' | 'archived'
+
+export const ItineraryStatusLabels: Record<ItineraryStatus, string> = {
+  draft: '草稿',
+  generated: '已生成',
+  in_progress: '进行中',
+  completed: '已完成',
+  archived: '已归档'
+}
+
 export interface ItineraryRequest {
   destination: string
   startDate: string
@@ -82,6 +92,15 @@ export interface ItineraryFormErrors {
   preferences?: string
 }
 
+export interface LocationData {
+  address: string
+  lat: number
+  lng: number
+  poi_id?: string
+  city?: string
+  district?: string
+}
+
 export interface AIItineraryResponse {
   summary: {
     destination: string
@@ -101,6 +120,7 @@ export interface AIItineraryResponse {
 }
 
 export interface DailySchedule {
+  day: number
   date: string
   dayOfWeek: string
   theme: string
@@ -122,13 +142,12 @@ export interface Activity {
   time: string
   type: ActivityType
   name: string
-  address: string
-  latitude?: number
-  longitude?: number
+  location: LocationData
   description: string
   cost: number
   duration: number
   tips: string
+  image_url?: string
 }
 
 export interface BudgetBreakdown {
@@ -137,6 +156,7 @@ export interface BudgetBreakdown {
   food: number
   tickets: number
   shopping: number
+  entertainment: number
   other: number
   total: number
 }
@@ -144,21 +164,22 @@ export interface BudgetBreakdown {
 export interface ItineraryItemBase {
   id: string
   itinerary_id: string
-  date: string
+  day: number
   time: string
   type: ActivityType
   name: string
-  address: string | null
-  latitude: number | null
-  longitude: number | null
+  location: LocationData
   description: string | null
   cost: number | null
   duration: number | null
-  order_index: number
+  tips: string | null
+  image_url: string | null
+  order_idx: number
   created_at: string
 }
 
 export interface DailyScheduleWithItems {
+  day: number
   date: string
   dayOfWeek: string
   theme: string

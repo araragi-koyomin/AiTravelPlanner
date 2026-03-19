@@ -66,8 +66,11 @@ describe('Expense Service', () => {
     itinerary_id: 'itinerary-id',
     category: 'food' as const,
     amount: 100,
-    date: '2024-01-01',
+    expense_date: '2024-01-01',
     description: '午餐',
+    payment_method: null,
+    receipt_url: null,
+    notes: null,
     created_at: '2024-01-01T00:00:00.000Z'
   }
 
@@ -94,7 +97,7 @@ describe('Expense Service', () => {
         itinerary_id: 'itinerary-id',
         category: 'food',
         amount: 100,
-        date: '2024-01-01',
+        expense_date: '2024-01-01',
         description: '午餐'
       })
 
@@ -121,7 +124,7 @@ describe('Expense Service', () => {
           itinerary_id: 'itinerary-id',
           category: 'food',
           amount: 100,
-          date: '2024-01-01',
+          expense_date: '2024-01-01',
           description: '午餐'
         })
       ).rejects.toThrow('创建费用记录失败')
@@ -171,7 +174,7 @@ describe('Expense Service', () => {
         category: 'food',
         startDate: '2024-01-01',
         endDate: '2024-01-31',
-        orderBy: 'date',
+        orderBy: 'expense_date',
         orderDirection: 'desc',
         limit: 10,
         offset: 0
@@ -179,8 +182,8 @@ describe('Expense Service', () => {
 
       expect(result).toEqual([mockExpense])
       expect(mockQuery.eq).toHaveBeenCalledWith('category', 'food')
-      expect(mockQuery.gte).toHaveBeenCalledWith('date', '2024-01-01')
-      expect(mockQuery.lte).toHaveBeenCalledWith('date', '2024-01-31')
+      expect(mockQuery.gte).toHaveBeenCalledWith('expense_date', '2024-01-01')
+      expect(mockQuery.lte).toHaveBeenCalledWith('expense_date', '2024-01-31')
     })
   })
 
@@ -285,7 +288,7 @@ describe('Expense Service', () => {
           itinerary_id: 'itinerary-id',
           category: 'food',
           amount: 100,
-          date: '2024-01-01',
+          expense_date: '2024-01-01',
           description: '午餐'
         }
       ])

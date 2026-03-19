@@ -32,6 +32,8 @@ const mockItinerary = {
   accommodation_pref: 'comfort',
   pace: 'moderate',
   is_favorite: false,
+  status: 'generated' as const,
+  cover_image: null,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z'
 }
@@ -40,51 +42,54 @@ const mockItems = [
   {
     id: 'item-1',
     itinerary_id: 'test-itinerary-id',
-    date: '2024-03-01',
+    day: 1,
     time: '09:00',
     type: 'attraction' as const,
     name: '故宫博物院',
-    address: '北京市东城区景山前街4号',
-    latitude: null,
-    longitude: null,
+    location: { address: '北京市东城区景山前街4号', lat: 0, lng: 0 },
     description: '参观故宫',
     cost: 60,
     duration: 180,
-    order_index: 0,
+    tips: null,
+    image_url: null,
+    order_idx: 0,
     created_at: '2024-01-01T00:00:00Z'
   },
   {
     id: 'item-2',
     itinerary_id: 'test-itinerary-id',
-    date: '2024-03-01',
+    day: 1,
     time: '12:00',
     type: 'restaurant' as const,
     name: '全聚德烤鸭店',
-    address: '北京市东城区前门大街',
-    latitude: null,
-    longitude: null,
+    location: { address: '北京市东城区前门大街', lat: 0, lng: 0 },
     description: '品尝北京烤鸭',
     cost: 200,
     duration: 90,
-    order_index: 1,
+    tips: null,
+    image_url: null,
+    order_idx: 1,
     created_at: '2024-01-01T00:00:00Z'
   }
 ]
 
 const mockDailySchedule = [
   {
+    day: 1,
     date: '2024-03-01',
     dayOfWeek: '星期五',
     theme: '探索之旅',
     items: mockItems
   },
   {
+    day: 2,
     date: '2024-03-02',
     dayOfWeek: '星期六',
     theme: '文化体验',
     items: []
   },
   {
+    day: 3,
     date: '2024-03-03',
     dayOfWeek: '星期日',
     theme: '休闲时光',
@@ -98,6 +103,7 @@ const mockBudgetBreakdown = {
   food: 600,
   tickets: 260,
   shopping: 200,
+  entertainment: 0,
   other: 100,
   total: 2660
 }

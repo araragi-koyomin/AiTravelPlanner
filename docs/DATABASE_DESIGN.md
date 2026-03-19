@@ -2,6 +2,9 @@
 
 本文档详细说明 AI 旅行规划师项目的数据库设计，包括表结构、关系、索引、约束和 Row Level Security (RLS) 策略。
 
+> **最后更新**: 2026-03-19  
+> **版本**: 2.0.0
+
 ## 📋 目录
 
 - [数据库概述](#数据库概述)
@@ -28,22 +31,24 @@
   - 实时订阅
   - 自动生成 API
   - 全文搜索
+  - JSONB 支持
 
 ### 设计原则
 
 1. **安全性优先**: 使用 RLS 保护数据
 2. **性能优化**: 合理使用索引
 3. **数据完整性**: 使用外键约束
-4. **可扩展性**: 预留扩展字段
+4. **可扩展性**: 预留扩展字段，使用 JSONB 存储灵活数据
 5. **可维护性**: 清晰的命名规范
 
 ### 命名规范
 
-- **表名**: 小写，复数形式（如 `users`, `itineraries`）
+- **表名**: 小写，复数形式（如 `user_profiles`, `itineraries`）
 - **字段名**: 小写，下划线分隔（如 `user_id`, `created_at`）
 - **主键**: `id` (UUID)
 - **外键**: `{table}_id` (如 `user_id`, `itinerary_id`)
 - **时间戳**: `created_at`, `updated_at`
+- **排序字段**: `order_idx` (索引后缀)
 
 ---
 
@@ -52,136 +57,139 @@
 ### 实体关系图
 
 ```
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│    users    │       │ itineraries │       │itinerary_   │
-│             │ 1    N │             │ 1    N │   items     │
-│ - id        │◄──────│ - id        │◄──────│ - id        │
-│ - email     │       │ - user_id   │       │ - itinerary │
-│ - password  │       │ - title     │       │   _id       │
-│ - name      │       │ - destina-  │       │ - date      │
-│ - avatar    │       │   tion      │       │ - time      │
-│ - created_at│       │ - start_    │       │ - type      │
-│ - updated_at│       │   date      │       │ - name      │
-└─────────────┘       │ - end_date  │       │ - address   │
-                      │ - budget    │       │ - latitude  │
-                      │ - partici-  │       │ - longitude │
-                      │   pants     │       │ - descrip-  │
-                      │ - travelers │       │   tion      │
-                      │   _type     │       │ - cost      │
-                      │ - accommo-  │       │ - duration  │
-                      │   dation    │       │ - order_idx │
-                      │ - pace      │       │ - created_at│
-                      │ - prefer-   │       └─────────────┘
-                      │   ences     │       
-                      │ - is_fav-   │       
-                      │   orite     │       
-                      │ - created_at│       
-                      │ - updated_at│       
-                      └─────────────┘       
-                             │ 1             
-                             │               
-                             │ N             
-                      ┌─────────────┐
-                      │  expenses   │
-                      │             │
-                      │ - id        │
-                      │ - itinerary │
-                      │   _id       │
-                      │ - category  │
-                      │ - amount    │
-                      │ - date      │
-                      │ - descrip-  │
-                      │   tion      │
-                      │ - created_at│
-                      └─────────────┘
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│  user_profiles  │       │   itineraries   │       │ itinerary_items │
+│                 │ 1   N │                 │ 1   N │                 │
+│ - id (PK)       │◄──────│ - id (PK)       │◄──────│ - id (PK)       │
+│ - username      │       │ - user_id (FK)  │       │ - itinerary_id  │
+│ - avatar_url    │       │ - title         │       │ - day           │
+│ - preferences   │       │ - destination   │       │ - time          │
+│   (JSONB)       │       │ - start_date    │       │ - type          │
+│ - created_at    │       │ - end_date      │       │ - name          │
+│ - updated_at    │       │ - budget        │       │ - location      │
+└─────────────────┘       │ - participants  │       │   (JSONB)       │
+                          │ - status        │       │ - description   │
+                          │ - cover_image   │       │ - cost          │
+                          │ - is_favorite   │       │ - duration      │
+                          │ - created_at    │       │ - tips          │
+                          │ - updated_at    │       │ - image_url     │
+                          └─────────────────┘       │ - order_idx     │
+                                   │ 1              │ - created_at    │
+                                   │                └─────────────────┘
+                                   │ N              
+                          ┌─────────────────┐
+                          │    expenses     │
+                          │                 │
+                          │ - id (PK)       │
+                          │ - itinerary_id  │
+                          │ - category      │
+                          │ - amount        │
+                          │ - expense_date  │
+                          │ - payment_method│
+                          │ - receipt_url   │
+                          │ - notes         │
+                          │ - created_at    │
+                          └─────────────────┘
 
-┌─────────────┐
-│user_settings│
-│             │
-│ - id        │
-│ - user_id   │
-│ - zhipu_    │
-│   api_key   │
-│ - xunfei_   │
-│   api_key   │
-│ - amap_     │
-│   api_key   │
-│ - theme     │
-│ - language  │
-│ - notifica- │
-│   tions    │
-│ - created_at│
-│ - updated_at│
-└─────────────┘
+┌─────────────────┐
+│  user_settings  │
+│                 │
+│ - id (PK)       │
+│ - user_id (FK)  │
+│ - zhipu_api_key │
+│ - xunfei_api_key│
+│ - amap_api_key  │
+│ - theme         │
+│ - language      │
+│ - notifications │
+│ - created_at    │
+│ - updated_at    │
+└─────────────────┘
 ```
 
 ### 关系说明
 
-| 关系                              | 类型 | 说明                       |
-| --------------------------------- | ---- | -------------------------- |
-| `users` → `itineraries`           | 1:N  | 一个用户可以有多个行程     |
-| `itineraries` → `itinerary_items` | 1:N  | 一个行程可以有多个行程项   |
-| `itineraries` → `expenses`        | 1:N  | 一个行程可以有多条费用记录 |
-| `users` → `user_settings`         | 1:1  | 一个用户对应一条设置记录   |
+| 关系                                   | 类型 | 说明                       |
+| -------------------------------------- | ---- | -------------------------- |
+| `auth.users` → `user_profiles`         | 1:1  | 一个认证用户对应一个资料   |
+| `auth.users` → `itineraries`           | 1:N  | 一个用户可以有多个行程     |
+| `itineraries` → `itinerary_items`      | 1:N  | 一个行程可以有多个行程项   |
+| `itineraries` → `expenses`             | 1:N  | 一个行程可以有多条费用记录 |
+| `auth.users` → `user_settings`         | 1:1  | 一个用户对应一条设置记录   |
 
 ---
 
 ## 表结构设计
 
-### 1. users (用户表)
+### 1. user_profiles (用户资料表)
 
-存储用户基本信息。
+存储用户扩展信息，与 Supabase Auth 的 `auth.users` 表关联。
 
 #### 表结构
 
-| 字段名       | 类型         | 约束            | 说明         |
-| ------------ | ------------ | --------------- | ------------ |
-| `id`         | UUID         | PRIMARY KEY     | 用户 ID      |
-| `email`      | VARCHAR(255) | UNIQUE NOT NULL | 邮箱地址     |
-| `password`   | VARCHAR(255) | NOT NULL        | 密码（哈希） |
-| `name`       | VARCHAR(100) | NULL            | 用户名       |
-| `avatar`     | TEXT         | NULL            | 头像 URL     |
-| `created_at` | TIMESTAMPTZ  | DEFAULT NOW()   | 创建时间     |
-| `updated_at` | TIMESTAMPTZ  | DEFAULT NOW()   | 更新时间     |
+| 字段名        | 类型         | 约束                        | 说明               |
+| ------------- | ------------ | --------------------------- | ------------------ |
+| `id`          | UUID         | PRIMARY KEY, FOREIGN KEY    | 用户 ID，关联 auth.users |
+| `username`    | VARCHAR(100) | NULL                        | 用户昵称           |
+| `avatar_url`  | TEXT         | NULL                        | 头像 URL           |
+| `preferences` | JSONB        | DEFAULT '{}'::jsonb         | 用户偏好设置       |
+| `created_at`  | TIMESTAMPTZ  | DEFAULT NOW()               | 创建时间           |
+| `updated_at`  | TIMESTAMPTZ  | DEFAULT NOW()               | 更新时间           |
 
 #### SQL 定义
 
 ```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY,  -- 不使用 DEFAULT，由 auth.users 同步
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  name VARCHAR(100),
-  avatar TEXT,
+CREATE TABLE user_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  username VARCHAR(100),
+  avatar_url TEXT,
+  preferences JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-#### ⚠️ 重要：与 Supabase Auth 的关系
+#### 字段说明
 
-**Supabase 使用 `auth.users` 表存储认证用户信息，而项目使用 `public.users` 表存储用户资料。**
+- **id**: 使用 UUID 作为主键，**直接关联 auth.users.id**
+- **username**: 用户昵称，可选字段
+- **avatar_url**: 存储头像图片的 URL（Supabase Storage）
+- **preferences**: 用户偏好设置，JSONB 格式，可包含：
+  - `favorite_destinations`: 喜欢的目的地列表
+  - `travel_style`: 旅行风格偏好
+  - `budget_preference`: 预算偏好
+  - `accommodation_type`: 住宿类型偏好
+  - `diet_restrictions`: 饮食限制
 
-| 表             | 用途                | 数据来源                       |
-| -------------- | ------------------- | ------------------------------ |
-| `auth.users`   | Supabase 内置认证表 | 用户注册时自动创建             |
-| `public.users` | 项目用户资料表      | 通过触发器从 `auth.users` 同步 |
+#### preferences JSONB 结构示例
 
-**必须创建触发器**，在用户注册时自动同步数据到 `public.users` 表，否则外键约束会失败。
+```json
+{
+  "favorite_destinations": ["日本", "泰国", "欧洲"],
+  "travel_style": ["美食", "文化", "自然"],
+  "budget_preference": "moderate",
+  "accommodation_type": ["舒适型"],
+  "diet_restrictions": ["素食"]
+}
+```
 
-#### 触发器函数和触发器
+#### 索引
 
 ```sql
--- 创建触发器函数：在 auth.users 创建新用户时，自动在 public.users 中创建对应记录
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+CREATE INDEX idx_user_profiles_username ON user_profiles(username);
+CREATE INDEX idx_user_profiles_preferences ON user_profiles USING GIN (preferences);
+```
+
+#### 自动创建触发器
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, email, password, name, created_at, updated_at)
+  INSERT INTO public.user_profiles (id, username, created_at, updated_at)
   VALUES (
     NEW.id,
-    NEW.email,
-    NEW.encrypted_password,
-    NEW.raw_user_meta_data->>'name',
+    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
     NEW.created_at,
     NEW.updated_at
   );
@@ -189,61 +197,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 创建触发器：在 auth.users 插入新记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_created
+CREATE TRIGGER on_auth_user_created_profile
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 创建触发器函数：在 auth.users 更新用户时，同步更新 public.users
-CREATE OR REPLACE FUNCTION public.handle_update_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE public.users
-  SET 
-    email = NEW.email,
-    password = NEW.encrypted_password,
-    name = NEW.raw_user_meta_data->>'name',
-    updated_at = NEW.updated_at
-  WHERE id = NEW.id;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 创建触发器：在 auth.users 更新记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_updated
-  AFTER UPDATE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
-
--- 创建触发器函数：在 auth.users 删除用户时，同步删除 public.users
-CREATE OR REPLACE FUNCTION public.handle_delete_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM public.users WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 创建触发器：在 auth.users 删除记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_deleted
-  AFTER DELETE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_delete_user();
-```
-
-#### 字段说明
-
-- **id**: 使用 UUID 作为主键，**与 auth.users.id 保持一致**
-- **email**: 唯一索引，用于登录，**与 auth.users.email 同步**
-- **password**: 存储 bcrypt 哈希值，**与 auth.users.encrypted_password 同步**
-- **name**: 可选字段，用户昵称，**从 auth.users.raw_user_meta_data 同步**
-- **avatar**: 存储头像图片的 URL（Supabase Storage）
-- **created_at**: 记录创建时间
-- **updated_at**: 记录最后更新时间
-
-#### 索引
-
-```sql
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at);
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
 ```
 
 ---
@@ -269,6 +225,8 @@ CREATE INDEX idx_users_created_at ON users(created_at);
 | `pace`                 | VARCHAR(50)    | NULL                 | 行程节奏     |
 | `preferences`          | TEXT[]         | NULL                 | 偏好标签数组 |
 | `special_requirements` | TEXT           | NULL                 | 特殊需求     |
+| `status`               | VARCHAR(50)    | DEFAULT 'generated'  | 行程状态     |
+| `cover_image`          | TEXT           | NULL                 | 封面图片 URL |
 | `is_favorite`          | BOOLEAN        | DEFAULT FALSE        | 是否收藏     |
 | `created_at`           | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间     |
 | `updated_at`           | TIMESTAMPTZ    | DEFAULT NOW()        | 更新时间     |
@@ -278,7 +236,7 @@ CREATE INDEX idx_users_created_at ON users(created_at);
 ```sql
 CREATE TABLE itineraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   title VARCHAR(255) NOT NULL,
   destination VARCHAR(255) NOT NULL,
   start_date DATE NOT NULL,
@@ -290,16 +248,22 @@ CREATE TABLE itineraries (
   pace VARCHAR(50),
   preferences TEXT[],
   special_requirements TEXT,
+  status VARCHAR(50) DEFAULT 'generated',
+  cover_image TEXT,
   is_favorite BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT check_budget_positive CHECK (budget > 0),
+  CONSTRAINT check_participants_positive CHECK (participants > 0),
+  CONSTRAINT check_status_valid CHECK (status IN ('draft', 'generated', 'in_progress', 'completed', 'archived')),
+  CONSTRAINT check_dates_valid CHECK (end_date >= start_date)
 );
 ```
 
 #### 字段说明
 
 - **id**: 行程唯一标识
-- **user_id**: 关联用户，级联删除
+- **user_id**: 关联用户（auth.users），级联删除
 - **title**: 行程标题，如 "日本 5 日游"
 - **destination**: 目的地，如 "日本东京"
 - **start_date**: 行程开始日期
@@ -323,6 +287,13 @@ CREATE TABLE itineraries (
   - `intense`: 紧凑充实
 - **preferences**: 偏好标签数组，如 `['美食', '动漫', '购物']`
 - **special_requirements**: 特殊需求，如 "需要无障碍设施"
+- **status**: 行程状态，枚举值：
+  - `draft`: 草稿
+  - `generated`: 已生成
+  - `in_progress`: 进行中
+  - `completed`: 已完成
+  - `archived`: 已归档
+- **cover_image**: 行程封面图片 URL
 - **is_favorite**: 是否收藏，用于快速访问
 - **created_at**: 创建时间
 - **updated_at**: 更新时间
@@ -334,6 +305,9 @@ CREATE INDEX idx_itineraries_user_id ON itineraries(user_id);
 CREATE INDEX idx_itineraries_start_date ON itineraries(start_date);
 CREATE INDEX idx_itineraries_is_favorite ON itineraries(is_favorite);
 CREATE INDEX idx_itineraries_destination ON itineraries(destination);
+CREATE INDEX idx_itineraries_status ON itineraries(status);
+CREATE INDEX idx_itineraries_user_status ON itineraries(user_id, status);
+CREATE INDEX idx_itineraries_user_favorite ON itineraries(user_id, is_favorite);
 ```
 
 ---
@@ -344,22 +318,22 @@ CREATE INDEX idx_itineraries_destination ON itineraries(destination);
 
 #### 表结构
 
-| 字段名         | 类型           | 约束                 | 说明          |
-| -------------- | -------------- | -------------------- | ------------- |
-| `id`           | UUID           | PRIMARY KEY          | 行程项 ID     |
-| `itinerary_id` | UUID           | FOREIGN KEY NOT NULL | 行程 ID       |
-| `date`         | DATE           | NOT NULL             | 日期          |
-| `time`         | VARCHAR(10)    | NOT NULL             | 时间（HH:MM） |
-| `type`         | VARCHAR(50)    | CHECK NOT NULL       | 类型          |
-| `name`         | VARCHAR(255)   | NOT NULL             | 名称          |
-| `address`      | VARCHAR(500)   | NULL                 | 地址          |
-| `latitude`     | DECIMAL(10, 8) | NULL                 | 纬度          |
-| `longitude`    | DECIMAL(11, 8) | NULL                 | 经度          |
-| `description`  | TEXT           | NULL                 | 描述          |
-| `cost`         | DECIMAL(10, 2) | NULL                 | 费用          |
-| `duration`     | INTEGER        | NULL                 | 时长（分钟）  |
-| `order_index`  | INTEGER        | NOT NULL             | 排序索引      |
-| `created_at`   | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间      |
+| 字段名         | 类型           | 约束                 | 说明               |
+| -------------- | -------------- | -------------------- | ------------------ |
+| `id`           | UUID           | PRIMARY KEY          | 行程项 ID          |
+| `itinerary_id` | UUID           | FOREIGN KEY NOT NULL | 行程 ID            |
+| `day`          | INTEGER        | NOT NULL             | 第几天（从1开始）  |
+| `time`         | VARCHAR(10)    | NOT NULL             | 时间（HH:MM）      |
+| `type`         | VARCHAR(50)    | CHECK NOT NULL       | 类型               |
+| `name`         | VARCHAR(255)   | NOT NULL             | 名称               |
+| `location`     | JSONB          | NOT NULL DEFAULT '{}'| 位置信息           |
+| `description`  | TEXT           | NULL                 | 描述               |
+| `cost`         | DECIMAL(10, 2) | NULL                 | 费用               |
+| `duration`     | INTEGER        | NULL                 | 时长（分钟）       |
+| `tips`         | TEXT           | NULL                 | 游玩建议           |
+| `image_url`    | TEXT           | NULL                 | 图片 URL           |
+| `order_idx`    | INTEGER        | NOT NULL             | 排序索引           |
+| `created_at`   | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间           |
 
 #### SQL 定义
 
@@ -367,17 +341,17 @@ CREATE INDEX idx_itineraries_destination ON itineraries(destination);
 CREATE TABLE itinerary_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
-  date DATE NOT NULL,
+  day INTEGER NOT NULL CHECK (day > 0),
   time VARCHAR(10) NOT NULL,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity')),
+  type VARCHAR(50) NOT NULL CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity', 'shopping')),
   name VARCHAR(255) NOT NULL,
-  address VARCHAR(500),
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  location JSONB NOT NULL DEFAULT '{}'::jsonb,
   description TEXT,
   cost DECIMAL(10, 2),
   duration INTEGER,
-  order_index INTEGER NOT NULL,
+  tips TEXT,
+  image_url TEXT,
+  order_idx INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
@@ -386,7 +360,7 @@ CREATE TABLE itinerary_items (
 
 - **id**: 行程项唯一标识
 - **itinerary_id**: 关联行程，级联删除
-- **date**: 活动日期
+- **day**: 行程第几天，从 1 开始（通过 `itineraries.start_date + (day - 1)` 计算实际日期）
 - **time**: 活动时间，格式 "HH:MM"
 - **type**: 活动类型，枚举值：
   - `transport`: 交通
@@ -394,23 +368,48 @@ CREATE TABLE itinerary_items (
   - `attraction`: 景点
   - `restaurant`: 餐厅
   - `activity`: 活动
+  - `shopping`: 购物
 - **name**: 活动名称
-- **address**: 地址
-- **latitude**: 纬度（用于地图）
-- **longitude**: 经度（用于地图）
+- **location**: 位置信息，JSONB 格式
 - **description**: 活动描述
 - **cost**: 费用（人民币）
 - **duration**: 时长（分钟）
-- **order_index**: 排序索引，用于按时间排序
+- **tips**: 游玩建议
+- **image_url**: 图片 URL
+- **order_idx**: 排序索引，用于按时间排序
 - **created_at**: 创建时间
+
+#### location JSONB 结构
+
+```json
+{
+  "address": "东京都港区芝公园4丁目2-8",
+  "lat": 35.6586,
+  "lng": 139.7454,
+  "poi_id": "B000A5FJD0",
+  "city": "东京",
+  "district": "港区"
+}
+```
+
+| 字段      | 类型    | 说明                    |
+| --------- | ------- | ----------------------- |
+| `address` | string  | 详细地址                |
+| `lat`     | number  | 纬度（高德地图坐标系）  |
+| `lng`     | number  | 经度（高德地图坐标系）  |
+| `poi_id`  | string  | POI 唯一标识（可选）    |
+| `city`    | string  | 城市（可选）            |
+| `district`| string  | 区县（可选）            |
 
 #### 索引
 
 ```sql
 CREATE INDEX idx_itinerary_items_itinerary_id ON itinerary_items(itinerary_id);
-CREATE INDEX idx_itinerary_items_date ON itinerary_items(date);
+CREATE INDEX idx_itinerary_items_day ON itinerary_items(day);
 CREATE INDEX idx_itinerary_items_type ON itinerary_items(type);
-CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
+CREATE INDEX idx_itinerary_items_order_idx ON itinerary_items(order_idx);
+CREATE INDEX idx_itinerary_items_location ON itinerary_items USING GIN (location);
+CREATE INDEX idx_itinerary_items_trip_day_order ON itinerary_items(itinerary_id, day, order_idx);
 ```
 
 ---
@@ -421,15 +420,18 @@ CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
 
 #### 表结构
 
-| 字段名         | 类型           | 约束                 | 说明        |
-| -------------- | -------------- | -------------------- | ----------- |
-| `id`           | UUID           | PRIMARY KEY          | 费用记录 ID |
-| `itinerary_id` | UUID           | FOREIGN KEY NOT NULL | 行程 ID     |
-| `category`     | VARCHAR(50)    | CHECK NOT NULL       | 类别        |
-| `amount`       | DECIMAL(10, 2) | NOT NULL             | 金额        |
-| `date`         | DATE           | NOT NULL             | 日期        |
-| `description`  | TEXT           | NULL                 | 描述        |
-| `created_at`   | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间    |
+| 字段名           | 类型           | 约束                 | 说明        |
+| ---------------- | -------------- | -------------------- | ----------- |
+| `id`             | UUID           | PRIMARY KEY          | 费用记录 ID |
+| `itinerary_id`   | UUID           | FOREIGN KEY NOT NULL | 行程 ID     |
+| `category`       | VARCHAR(50)    | CHECK NOT NULL       | 类别        |
+| `amount`         | DECIMAL(10, 2) | NOT NULL             | 金额        |
+| `expense_date`   | DATE           | NOT NULL             | 消费日期    |
+| `payment_method` | VARCHAR(50)    | NULL                 | 支付方式    |
+| `receipt_url`    | TEXT           | NULL                 | 票据照片 URL|
+| `notes`          | TEXT           | NULL                 | 备注        |
+| `description`    | TEXT           | NULL                 | 描述        |
+| `created_at`     | TIMESTAMPTZ    | DEFAULT NOW()        | 创建时间    |
 
 #### SQL 定义
 
@@ -437,9 +439,12 @@ CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
 CREATE TABLE expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'other')),
-  amount DECIMAL(10, 2) NOT NULL,
-  date DATE NOT NULL,
+  category VARCHAR(50) NOT NULL CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'entertainment', 'other')),
+  amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+  expense_date DATE NOT NULL,
+  payment_method VARCHAR(50),
+  receipt_url TEXT,
+  notes TEXT,
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -455,10 +460,20 @@ CREATE TABLE expenses (
   - `food`: 餐饮
   - `ticket`: 门票
   - `shopping`: 购物
+  - `entertainment`: 娱乐
   - `other`: 其他
 - **amount**: 金额（人民币）
-- **date**: 消费日期
-- **description**: 描述
+- **expense_date**: 消费日期
+- **payment_method**: 支付方式，枚举值：
+  - `cash`: 现金
+  - `credit_card`: 信用卡
+  - `debit_card`: 借记卡
+  - `alipay`: 支付宝
+  - `wechat`: 微信支付
+  - `other`: 其他
+- **receipt_url**: 票据照片 URL
+- **notes**: 费用备注
+- **description**: 详细描述
 - **created_at**: 创建时间
 
 #### 索引
@@ -466,7 +481,8 @@ CREATE TABLE expenses (
 ```sql
 CREATE INDEX idx_expenses_itinerary_id ON expenses(itinerary_id);
 CREATE INDEX idx_expenses_category ON expenses(category);
-CREATE INDEX idx_expenses_date ON expenses(date);
+CREATE INDEX idx_expenses_expense_date ON expenses(expense_date);
+CREATE INDEX idx_expenses_itinerary_date ON expenses(itinerary_id, expense_date);
 ```
 
 ---
@@ -495,7 +511,7 @@ CREATE INDEX idx_expenses_date ON expenses(date);
 ```sql
 CREATE TABLE user_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   zhipu_api_key TEXT,
   xunfei_api_key TEXT,
   amap_api_key TEXT,
@@ -510,7 +526,7 @@ CREATE TABLE user_settings (
 #### 字段说明
 
 - **id**: 设置记录唯一标识
-- **user_id**: 关联用户，唯一约束，级联删除
+- **user_id**: 关联用户（auth.users），唯一约束，级联删除
 - **zhipu_api_key**: 智谱AI API Key（加密存储）
 - **xunfei_api_key**: 科大讯飞 API Key（加密存储）
 - **amap_api_key**: 高德地图 API Key（加密存储）
@@ -534,30 +550,47 @@ CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
 
 ## 表关系说明
 
-### 1. users → itineraries (一对多)
+### 1. auth.users → user_profiles (一对一)
+
+**关系说明**：一个认证用户对应一个用户资料
+
+**外键约束**：
+```sql
+id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY
+```
+
+**级联删除**：删除 auth.users 时，自动删除 user_profiles
+
+**查询示例**：
+```sql
+SELECT up.*, au.email
+FROM user_profiles up
+JOIN auth.users au ON up.id = au.id
+WHERE up.id = 'user-uuid';
+```
+
+### 2. auth.users → itineraries (一对多)
 
 **关系说明**：一个用户可以创建多个行程
 
 **外键约束**：
 ```sql
-user_id UUID REFERENCES users(id) ON DELETE CASCADE
+user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
 ```
 
 **级联删除**：删除用户时，自动删除其所有行程
 
 **查询示例**：
 ```sql
--- 查询用户的所有行程
 SELECT * FROM itineraries WHERE user_id = 'user-uuid';
 
--- 查询用户及其行程
-SELECT u.*, i.* 
-FROM users u
-LEFT JOIN itineraries i ON u.id = i.user_id
-WHERE u.id = 'user-uuid';
+SELECT au.email, i.*
+FROM auth.users au
+LEFT JOIN itineraries i ON au.id = i.user_id
+WHERE au.id = 'user-uuid';
 ```
 
-### 2. itineraries → itinerary_items (一对多)
+### 3. itineraries → itinerary_items (一对多)
 
 **关系说明**：一个行程包含多个行程项
 
@@ -570,18 +603,18 @@ itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE
 
 **查询示例**：
 ```sql
--- 查询行程的所有行程项
-SELECT * FROM itinerary_items WHERE itinerary_id = 'itinerary-uuid';
+SELECT * FROM itinerary_items 
+WHERE itinerary_id = 'itinerary-uuid'
+ORDER BY day, order_idx;
 
--- 查询行程及其行程项（按日期和时间排序）
-SELECT i.*, it.*
+SELECT i.destination, ii.*
 FROM itineraries i
-LEFT JOIN itinerary_items it ON i.id = it.itinerary_id
+JOIN itinerary_items ii ON i.id = ii.itinerary_id
 WHERE i.id = 'itinerary-uuid'
-ORDER BY it.date, it.time, it.order_index;
+ORDER BY ii.day, ii.order_idx;
 ```
 
-### 3. itineraries → expenses (一对多)
+### 4. itineraries → expenses (一对多)
 
 **关系说明**：一个行程可以有多条费用记录
 
@@ -594,175 +627,65 @@ itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE
 
 **查询示例**：
 ```sql
--- 查询行程的所有费用记录
 SELECT * FROM expenses WHERE itinerary_id = 'itinerary-uuid';
 
--- 查询行程及其费用记录（按类别分组）
-SELECT i.*, e.*
-FROM itineraries i
-LEFT JOIN expenses e ON i.id = e.itinerary_id
-WHERE i.id = 'itinerary-uuid'
-ORDER BY e.date DESC;
-```
-
-### 4. users → user_settings (一对一)
-
-**关系说明**：一个用户对应一条设置记录
-
-**外键约束**：
-```sql
-user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE
-```
-
-**唯一约束**：确保一个用户只有一条设置记录
-
-**级联删除**：删除用户时，自动删除其设置
-
-**查询示例**：
-```sql
--- 查询用户的设置
-SELECT * FROM user_settings WHERE user_id = 'user-uuid';
-
--- 查询用户及其设置
-SELECT u.*, us.*
-FROM users u
-LEFT JOIN user_settings us ON u.id = us.user_id
-WHERE u.id = 'user-uuid';
+SELECT category, SUM(amount) as total
+FROM expenses
+WHERE itinerary_id = 'itinerary-uuid'
+GROUP BY category;
 ```
 
 ---
 
 ## 索引设计
 
-### 索引策略
+### 索引总览
 
-1. **主键索引**：自动创建（UUID）
-2. **外键索引**：为所有外键创建索引
-3. **查询索引**：为常用查询字段创建索引
-4. **复合索引**：为多字段查询创建复合索引
-
-### 索引清单
-
-| 表名              | 索引名                             | 字段           | 类型   | 说明             |
-| ----------------- | ---------------------------------- | -------------- | ------ | ---------------- |
-| `users`           | `idx_users_email`                  | `email`        | UNIQUE | 邮箱唯一索引     |
-| `users`           | `idx_users_created_at`             | `created_at`   | INDEX  | 按创建时间排序   |
-| `itineraries`     | `idx_itineraries_user_id`          | `user_id`      | INDEX  | 查询用户的行程   |
-| `itineraries`     | `idx_itineraries_start_date`       | `start_date`   | INDEX  | 按开始日期排序   |
-| `itineraries`     | `idx_itineraries_is_favorite`      | `is_favorite`  | INDEX  | 查询收藏的行程   |
-| `itineraries`     | `idx_itineraries_destination`      | `destination`  | INDEX  | 按目的地搜索     |
-| `itinerary_items` | `idx_itinerary_items_itinerary_id` | `itinerary_id` | INDEX  | 查询行程的行程项 |
-| `itinerary_items` | `idx_itinerary_items_date`         | `date`         | INDEX  | 按日期排序       |
-| `itinerary_items` | `idx_itinerary_items_type`         | `type`         | INDEX  | 按类型筛选       |
-| `itinerary_items` | `idx_itinerary_items_order_index`  | `order_index`  | INDEX  | 按顺序排序       |
-| `expenses`        | `idx_expenses_itinerary_id`        | `itinerary_id` | INDEX  | 查询行程的费用   |
-| `expenses`        | `idx_expenses_category`            | `category`     | INDEX  | 按类别分组       |
-| `expenses`        | `idx_expenses_date`                | `date`         | INDEX  | 按日期排序       |
-| `user_settings`   | `idx_user_settings_user_id`        | `user_id`      | INDEX  | 查询用户设置     |
-
-### 索引创建 SQL
-
-```sql
--- users 表
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at);
-
--- itineraries 表
-CREATE INDEX idx_itineraries_user_id ON itineraries(user_id);
-CREATE INDEX idx_itineraries_start_date ON itineraries(start_date);
-CREATE INDEX idx_itineraries_is_favorite ON itineraries(is_favorite);
-CREATE INDEX idx_itineraries_destination ON itineraries(destination);
-
--- itinerary_items 表
-CREATE INDEX idx_itinerary_items_itinerary_id ON itinerary_items(itinerary_id);
-CREATE INDEX idx_itinerary_items_date ON itinerary_items(date);
-CREATE INDEX idx_itinerary_items_type ON itinerary_items(type);
-CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
-
--- expenses 表
-CREATE INDEX idx_expenses_itinerary_id ON expenses(itinerary_id);
-CREATE INDEX idx_expenses_category ON expenses(category);
-CREATE INDEX idx_expenses_date ON expenses(date);
-
--- user_settings 表
-CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
-```
+| 表名              | 索引名                          | 字段              | 类型  | 用途           |
+| ----------------- | ------------------------------- | ----------------- | ----- | -------------- |
+| `user_profiles`   | `idx_user_profiles_username`    | `username`        | B-tree | 用户名搜索    |
+| `user_profiles`   | `idx_user_profiles_preferences` | `preferences`     | GIN   | JSONB 查询    |
+| `itineraries`     | `idx_itineraries_user_id`       | `user_id`         | B-tree | 用户行程查询  |
+| `itineraries`     | `idx_itineraries_status`        | `status`          | B-tree | 状态筛选      |
+| `itineraries`     | `idx_itineraries_user_status`   | `user_id, status` | B-tree | 复合查询      |
+| `itinerary_items` | `idx_itinerary_items_day`       | `day`             | B-tree | 日期筛选      |
+| `itinerary_items` | `idx_itinerary_items_location`  | `location`        | GIN   | JSONB 查询    |
+| `itinerary_items` | `idx_itinerary_items_trip_day_order` | `itinerary_id, day, order_idx` | B-tree | 复合排序 |
+| `expenses`        | `idx_expenses_itinerary_date`   | `itinerary_id, expense_date` | B-tree | 复合查询 |
 
 ---
 
 ## 约束设计
 
-### 1. 主键约束 (PRIMARY KEY)
-
-所有表都使用 UUID 作为主键：
+### CHECK 约束
 
 ```sql
-id UUID PRIMARY KEY DEFAULT gen_random_uuid()
-```
+-- itineraries 表
+ALTER TABLE itineraries ADD CONSTRAINT check_budget_positive CHECK (budget > 0);
+ALTER TABLE itineraries ADD CONSTRAINT check_participants_positive CHECK (participants > 0);
+ALTER TABLE itineraries ADD CONSTRAINT check_status_valid 
+  CHECK (status IN ('draft', 'generated', 'in_progress', 'completed', 'archived'));
+ALTER TABLE itineraries ADD CONSTRAINT check_dates_valid CHECK (end_date >= start_date);
 
-**优势**：
-- 全局唯一
-- 不暴露自增 ID
-- 适合分布式系统
+-- itinerary_items 表
+ALTER TABLE itinerary_items ADD CONSTRAINT check_day_positive CHECK (day > 0);
+ALTER TABLE itinerary_items ADD CONSTRAINT itinerary_items_type_check 
+  CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity', 'shopping'));
 
-### 2. 外键约束 (FOREIGN KEY)
-
-确保数据完整性：
-
-```sql
-user_id UUID REFERENCES users(id) ON DELETE CASCADE
-```
-
-**级联操作**：
-- `ON DELETE CASCADE`: 删除父记录时，自动删除子记录
-- `ON UPDATE CASCADE`: 更新父记录时，自动更新子记录
-
-### 3. 唯一约束 (UNIQUE)
-
-确保字段值唯一：
-
-```sql
-email VARCHAR(255) UNIQUE NOT NULL
-```
-
-### 4. 非空约束 (NOT NULL)
-
-确保字段必须有值：
-
-```sql
-title VARCHAR(255) NOT NULL
-```
-
-### 5. 检查约束 (CHECK)
-
-确保字段值符合规则：
-
-```sql
-type VARCHAR(50) CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity'))
-```
-
-### 6. 默认值约束 (DEFAULT)
-
-为字段设置默认值：
-
-```sql
-created_at TIMESTAMPTZ DEFAULT NOW()
-is_favorite BOOLEAN DEFAULT FALSE
+-- expenses 表
+ALTER TABLE expenses ADD CONSTRAINT check_amount_positive CHECK (amount > 0);
+ALTER TABLE expenses ADD CONSTRAINT expenses_category_check 
+  CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'entertainment', 'other'));
 ```
 
 ---
 
 ## Row Level Security (RLS)
 
-### RLS 概述
-
-Row Level Security (RLS) 是 PostgreSQL 的安全特性，允许在行级别控制数据访问。
-
 ### 启用 RLS
 
 ```sql
--- 启用 RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
@@ -771,34 +694,31 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
 ### RLS 策略
 
-#### 1. users 表策略
+#### 1. user_profiles 表策略
 
 ```sql
--- 用户可以查看自己的资料
-CREATE POLICY "Users can view own profile" ON users
+CREATE POLICY "Users can view own profile" ON user_profiles
   FOR SELECT USING (auth.uid() = id);
 
--- 用户可以更新自己的资料
-CREATE POLICY "Users can update own profile" ON users
+CREATE POLICY "Users can insert own profile" ON user_profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON user_profiles
   FOR UPDATE USING (auth.uid() = id);
 ```
 
 #### 2. itineraries 表策略
 
 ```sql
--- 用户可以查看自己的行程
 CREATE POLICY "Users can view own itineraries" ON itineraries
   FOR SELECT USING (auth.uid() = user_id);
 
--- 用户可以插入自己的行程
 CREATE POLICY "Users can insert own itineraries" ON itineraries
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- 用户可以更新自己的行程
 CREATE POLICY "Users can update own itineraries" ON itineraries
   FOR UPDATE USING (auth.uid() = user_id);
 
--- 用户可以删除自己的行程
 CREATE POLICY "Users can delete own itineraries" ON itineraries
   FOR DELETE USING (auth.uid() = user_id);
 ```
@@ -806,7 +726,6 @@ CREATE POLICY "Users can delete own itineraries" ON itineraries
 #### 3. itinerary_items 表策略
 
 ```sql
--- 用户可以查看自己行程的行程项
 CREATE POLICY "Users can view own itinerary items" ON itinerary_items
   FOR SELECT USING (
     EXISTS (
@@ -816,7 +735,6 @@ CREATE POLICY "Users can view own itinerary items" ON itinerary_items
     )
   );
 
--- 用户可以插入自己行程的行程项
 CREATE POLICY "Users can insert own itinerary items" ON itinerary_items
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -826,7 +744,6 @@ CREATE POLICY "Users can insert own itinerary items" ON itinerary_items
     )
   );
 
--- 用户可以更新自己行程的行程项
 CREATE POLICY "Users can update own itinerary items" ON itinerary_items
   FOR UPDATE USING (
     EXISTS (
@@ -836,7 +753,6 @@ CREATE POLICY "Users can update own itinerary items" ON itinerary_items
     )
   );
 
--- 用户可以删除自己行程的行程项
 CREATE POLICY "Users can delete own itinerary items" ON itinerary_items
   FOR DELETE USING (
     EXISTS (
@@ -850,7 +766,6 @@ CREATE POLICY "Users can delete own itinerary items" ON itinerary_items
 #### 4. expenses 表策略
 
 ```sql
--- 用户可以查看自己行程的费用记录
 CREATE POLICY "Users can view own expenses" ON expenses
   FOR SELECT USING (
     EXISTS (
@@ -860,7 +775,6 @@ CREATE POLICY "Users can view own expenses" ON expenses
     )
   );
 
--- 用户可以插入自己行程的费用记录
 CREATE POLICY "Users can insert own expenses" ON expenses
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -870,7 +784,6 @@ CREATE POLICY "Users can insert own expenses" ON expenses
     )
   );
 
--- 用户可以更新自己行程的费用记录
 CREATE POLICY "Users can update own expenses" ON expenses
   FOR UPDATE USING (
     EXISTS (
@@ -880,7 +793,6 @@ CREATE POLICY "Users can update own expenses" ON expenses
     )
   );
 
--- 用户可以删除自己行程的费用记录
 CREATE POLICY "Users can delete own expenses" ON expenses
   FOR DELETE USING (
     EXISTS (
@@ -894,325 +806,41 @@ CREATE POLICY "Users can delete own expenses" ON expenses
 #### 5. user_settings 表策略
 
 ```sql
--- 用户可以查看自己的设置
 CREATE POLICY "Users can view own settings" ON user_settings
   FOR SELECT USING (auth.uid() = user_id);
 
--- 用户可以更新自己的设置
 CREATE POLICY "Users can update own settings" ON user_settings
   FOR UPDATE USING (auth.uid() = user_id);
 
--- 用户可以插入自己的设置
 CREATE POLICY "Users can insert own settings" ON user_settings
   FOR INSERT WITH CHECK (auth.uid() = user_id);
-```
-
-### RLS 测试
-
-```sql
--- 测试 RLS 策略
--- 1. 设置当前用户
-SET LOCAL request.jwt.claim.sub = 'user-uuid';
-
--- 2. 尝试查询其他用户的数据（应该失败）
-SELECT * FROM itineraries WHERE user_id = 'other-user-uuid';
--- 应该返回空结果
-
--- 3. 查询自己的数据（应该成功）
-SELECT * FROM itineraries WHERE user_id = 'user-uuid';
--- 应该返回自己的行程
 ```
 
 ---
 
 ## 数据迁移
 
-### 创建迁移文件
+### 迁移文件命名规范
 
-使用 Supabase CLI 创建迁移文件：
-
-```bash
-supabase migration new create_tables
 ```
-
-### 迁移文件内容
-
-```sql
--- supabase/migrations/20240312000000_create_tables.sql
-
--- ============================================
--- 创建用户表（与 auth.users 同步）
--- ============================================
--- 注意：id 不使用 DEFAULT，由 auth.users 触发器同步
-
-CREATE TABLE users (
-  id UUID PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  name VARCHAR(100),
-  avatar TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================
--- 创建触发器：auth.users 与 public.users 同步
--- ============================================
-
--- 创建触发器函数：在 auth.users 创建新用户时，自动在 public.users 中创建对应记录
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.users (id, email, password, name, created_at, updated_at)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    NEW.encrypted_password,
-    NEW.raw_user_meta_data->>'name',
-    NEW.created_at,
-    NEW.updated_at
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 创建触发器：在 auth.users 插入新记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 创建触发器函数：在 auth.users 更新用户时，同步更新 public.users
-CREATE OR REPLACE FUNCTION public.handle_update_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE public.users
-  SET 
-    email = NEW.email,
-    password = NEW.encrypted_password,
-    name = NEW.raw_user_meta_data->>'name',
-    updated_at = NEW.updated_at
-  WHERE id = NEW.id;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 创建触发器：在 auth.users 更新记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_updated
-  AFTER UPDATE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
-
--- 创建触发器函数：在 auth.users 删除用户时，同步删除 public.users
-CREATE OR REPLACE FUNCTION public.handle_delete_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM public.users WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 创建触发器：在 auth.users 删除记录后执行
-CREATE OR REPLACE TRIGGER on_auth_user_deleted
-  AFTER DELETE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_delete_user();
-
--- ============================================
--- 创建行程表
--- ============================================
-CREATE TABLE itineraries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  destination VARCHAR(255) NOT NULL,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  budget DECIMAL(10, 2) NOT NULL,
-  participants INTEGER NOT NULL,
-  preferences TEXT[],
-  special_requirements TEXT,
-  is_favorite BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 创建行程详情表
-CREATE TABLE itinerary_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
-  date DATE NOT NULL,
-  time VARCHAR(10) NOT NULL,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity')),
-  name VARCHAR(255) NOT NULL,
-  address VARCHAR(500),
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  description TEXT,
-  cost DECIMAL(10, 2),
-  duration INTEGER,
-  order_index INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 创建费用记录表
-CREATE TABLE expenses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'other')),
-  amount DECIMAL(10, 2) NOT NULL,
-  date DATE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 创建用户设置表
-CREATE TABLE user_settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  zhipu_api_key TEXT,
-  xunfei_api_key TEXT,
-  amap_api_key TEXT,
-  theme VARCHAR(10) DEFAULT 'light' CHECK (theme IN ('light', 'dark')),
-  language VARCHAR(5) DEFAULT 'zh' CHECK (language IN ('zh', 'en')),
-  notifications BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 创建索引
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at);
-
-CREATE INDEX idx_itineraries_user_id ON itineraries(user_id);
-CREATE INDEX idx_itineraries_start_date ON itineraries(start_date);
-CREATE INDEX idx_itineraries_is_favorite ON itineraries(is_favorite);
-CREATE INDEX idx_itineraries_destination ON itineraries(destination);
-
-CREATE INDEX idx_itinerary_items_itinerary_id ON itinerary_items(itinerary_id);
-CREATE INDEX idx_itinerary_items_date ON itinerary_items(date);
-CREATE INDEX idx_itinerary_items_type ON itinerary_items(type);
-CREATE INDEX idx_itinerary_items_order_index ON itinerary_items(order_index);
-
-CREATE INDEX idx_expenses_itinerary_id ON expenses(itinerary_id);
-CREATE INDEX idx_expenses_category ON expenses(category);
-CREATE INDEX idx_expenses_date ON expenses(date);
-
-CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
-
--- 启用 RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
-
--- 创建 RLS 策略
-CREATE POLICY "Users can view own profile" ON users
-  FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own profile" ON users
-  FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Users can view own itineraries" ON itineraries
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own itineraries" ON itineraries
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own itineraries" ON itineraries
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own itineraries" ON itineraries
-  FOR DELETE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can view own itinerary items" ON itinerary_items
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = itinerary_items.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can insert own itinerary items" ON itinerary_items
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = itinerary_items.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can update own itinerary items" ON itinerary_items
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = itinerary_items.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can delete own itinerary items" ON itinerary_items
-  FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = itinerary_items.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can view own expenses" ON expenses
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = expenses.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can insert own expenses" ON expenses
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = expenses.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can update own expenses" ON expenses
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = expenses.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can delete own expenses" ON expenses
-  FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM itineraries
-      WHERE itineraries.id = expenses.itinerary_id
-      AND itineraries.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can view own settings" ON user_settings
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own settings" ON user_settings
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own settings" ON user_settings
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+supabase/migrations/
+├── 001_initial_schema.sql          # 初始化数据库结构
+├── 002_drop_users_table.sql        # 删除 users 表
+├── 003_create_user_profiles.sql    # 创建 user_profiles 表
+├── 004_alter_itineraries.sql       # 修改 itineraries 表
+├── 005_alter_itinerary_items.sql   # 重构 itinerary_items 表
+├── 006_alter_expenses.sql          # 扩展 expenses 表
+├── 007_create_indexes.sql          # 创建优化索引
+└── 008_verify_migration.sql        # 验证脚本
 ```
 
 ### 应用迁移
 
 ```bash
-# 应用迁移
+# 使用 Supabase CLI
 supabase db push
 
-# 或使用 SQL Editor
-# 复制迁移文件内容到 SQL Editor 中执行
+# 或在 Supabase Dashboard 的 SQL Editor 中执行
 ```
 
 ---
@@ -1224,22 +852,19 @@ supabase db push
 #### 使用索引
 
 ```sql
--- 慢查询（全表扫描）
-SELECT * FROM itineraries WHERE user_id = 'user-uuid';
-
 -- 快速查询（使用索引）
 SELECT * FROM itineraries WHERE user_id = 'user-uuid';
 -- 使用索引：idx_itineraries_user_id
+
+SELECT * FROM itineraries WHERE user_id = 'user-uuid' AND status = 'generated';
+-- 使用索引：idx_itineraries_user_status
 ```
 
 #### 避免使用 SELECT *
 
 ```sql
--- 慢查询（返回所有字段）
-SELECT * FROM itineraries WHERE user_id = 'user-uuid';
-
--- 快速查询（只返回需要的字段）
-SELECT id, title, destination, start_date, end_date 
+-- 推荐：只返回需要的字段
+SELECT id, title, destination, start_date, end_date, status
 FROM itineraries 
 WHERE user_id = 'user-uuid';
 ```
@@ -1247,129 +872,59 @@ WHERE user_id = 'user-uuid';
 #### 使用 LIMIT 限制结果
 
 ```sql
--- 慢查询（返回所有结果）
-SELECT * FROM itineraries WHERE user_id = 'user-uuid';
-
--- 快速查询（只返回前 10 条）
 SELECT * FROM itineraries WHERE user_id = 'user-uuid' LIMIT 10;
 ```
 
-### 2. 连接优化
-
-#### 使用 JOIN 而不是子查询
+### 2. JSONB 查询优化
 
 ```sql
--- 慢查询（子查询）
-SELECT * FROM itineraries 
-WHERE user_id IN (SELECT id FROM users WHERE email = 'test@example.com');
+-- 查询偏好包含"美食"的用户
+SELECT * FROM user_profiles 
+WHERE preferences @> '{"travel_style": ["美食"]}'::jsonb;
 
--- 快速查询（JOIN）
-SELECT i.* 
-FROM itineraries i
-JOIN users u ON i.user_id = u.id
-WHERE u.email = 'test@example.com';
+-- 查询特定城市的行程项
+SELECT * FROM itinerary_items 
+WHERE location->>'city' = '东京';
+
+-- 使用 GIN 索引加速 JSONB 查询
+-- 已创建：idx_user_profiles_preferences, idx_itinerary_items_location
 ```
 
 ### 3. 批量操作
 
-#### 使用批量插入
-
 ```sql
--- 慢操作（逐条插入）
-INSERT INTO itinerary_items (itinerary_id, date, time, type, name, order_index) 
-VALUES ('itinerary-uuid', '2024-04-01', '09:00', 'attraction', '景点1', 1);
-INSERT INTO itinerary_items (itinerary_id, date, time, type, name, order_index) 
-VALUES ('itinerary-uuid', '2024-04-01', '12:00', 'restaurant', '餐厅1', 2);
-
--- 快速操作（批量插入）
-INSERT INTO itinerary_items (itinerary_id, date, time, type, name, order_index) 
+-- 批量插入
+INSERT INTO itinerary_items (itinerary_id, day, time, type, name, location, order_idx) 
 VALUES 
-  ('itinerary-uuid', '2024-04-01', '09:00', 'attraction', '景点1', 1),
-  ('itinerary-uuid', '2024-04-01', '12:00', 'restaurant', '餐厅1', 2);
-```
-
-### 4. 缓存策略
-
-#### 使用 PostgreSQL 缓存
-
-```sql
--- 启用查询缓存
-SET enable_seqscan = off;
-
--- 使用物化视图
-CREATE MATERIALIZED VIEW user_itinerary_summary AS
-SELECT 
-  u.id as user_id,
-  u.email,
-  COUNT(i.id) as itinerary_count,
-  SUM(i.budget) as total_budget
-FROM users u
-LEFT JOIN itineraries i ON u.id = i.user_id
-GROUP BY u.id, u.email;
-
--- 刷新物化视图
-REFRESH MATERIALIZED VIEW user_itinerary_summary;
+  ('itinerary-uuid', 1, '09:00', 'attraction', '景点1', '{"address": "..."}', 1),
+  ('itinerary-uuid', 1, '12:00', 'restaurant', '餐厅1', '{"address": "..."}', 2);
 ```
 
 ---
 
 ## 备份与恢复
 
-### 1. 备份策略
+### 备份策略
 
-#### 自动备份
+1. **自动备份**：Supabase 提供每日自动备份
+2. **手动备份**：重要操作前手动创建快照
+3. **导出数据**：定期导出关键数据
 
-在 Supabase Dashboard 中配置自动备份：
-
-1. 进入项目 Dashboard
-2. 点击 "Database" → "Backups"
-3. 配置自动备份：
-   - **Frequency**: 每天
-   - **Retention**: 保留 30 天
-4. 点击 "Enable"
-
-#### 手动备份
-
-```bash
-# 使用 Supabase CLI 备份
-supabase db dump -f backup.sql
-
-# 或使用 pg_dump
-pg_dump -h db.xxx.supabase.co -U postgres -d postgres > backup.sql
-```
-
-### 2. 恢复策略
-
-#### 从备份恢复
+### 恢复流程
 
 ```bash
 # 使用 Supabase CLI 恢复
 supabase db reset
 
-# 或使用 psql
-psql -h db.xxx.supabase.co -U postgres -d postgres -f backup.sql
+# 从备份恢复
+supabase db restore --backup-id <backup-id>
 ```
 
-#### 点时间恢复 (PITR)
-
-在 Supabase Dashboard 中：
-
-1. 进入项目 Dashboard
-2. 点击 "Database" → "Backups"
-3. 选择备份点
-4. 点击 "Restore"
-
 ---
 
-## 参考资料
+## 变更历史
 
-- [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
-- [Supabase 数据库文档](https://supabase.com/docs/guides/database)
-- [PostgreSQL 性能优化](https://www.postgresql.org/docs/current/performance-tips.html)
-- [Row Level Security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
-
----
-
-**文档版本**：v1.0
-**最后更新**：2026-03-12
-**维护者**：项目开发者
+| 版本   | 日期       | 变更内容                                      |
+| ------ | ---------- | --------------------------------------------- |
+| 2.0.0  | 2026-03-19 | 重大重构：users→user_profiles，itinerary_items 结构重构 |
+| 1.0.0  | 2026-03-15 | 初始版本                                      |

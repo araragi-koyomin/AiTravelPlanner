@@ -99,6 +99,8 @@ describe('Itinerary Service', () => {
     preferences: ['美食', '购物'],
     special_requirements: null,
     is_favorite: false,
+    status: 'generated',
+    cover_image: null,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z'
   }
@@ -416,10 +418,29 @@ describe('Itinerary Service', () => {
   describe('duplicateItinerary', () => {
     it('应该成功复制行程', async () => {
       const mockItems = [
-        { id: 'item-1', itinerary_id: 'test-id', date: '2024-01-01', time: '09:00', type: 'attraction', name: '景点A', address: '地址A', latitude: 35.6, longitude: 139.7, description: '描述', cost: 100, duration: 60, order_index: 1 }
+        { 
+          id: 'item-1', 
+          itinerary_id: 'test-id', 
+          day: 1, 
+          time: '09:00', 
+          type: 'attraction', 
+          name: '景点A', 
+          location: { address: '地址A', lat: 35.6, lng: 139.7 }, 
+          description: '描述', 
+          cost: 100, 
+          duration: 60, 
+          order_idx: 1 
+        }
       ]
       const mockExpenses = [
-        { id: 'expense-1', itinerary_id: 'test-id', category: 'food', amount: 100, date: '2024-01-01', description: '午餐' }
+        { 
+          id: 'expense-1', 
+          itinerary_id: 'test-id', 
+          category: 'food', 
+          amount: 100, 
+          expense_date: '2024-01-01', 
+          description: '午餐' 
+        }
       ]
 
       const mockItineraryQuery = {

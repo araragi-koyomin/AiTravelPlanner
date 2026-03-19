@@ -77,6 +77,7 @@ const createMockItinerary = () => ({
   special_requirements: null,
   daily_schedule: [
     {
+      day: 1,
       date: '2026-04-01',
       dayOfWeek: '星期三',
       theme: '故宫一日游',
@@ -85,9 +86,11 @@ const createMockItinerary = () => ({
           time: '09:00',
           type: 'attraction' as const,
           name: '故宫博物院',
-          address: '北京市东城区景山前街4号',
-          latitude: 39.9163,
-          longitude: 116.3972,
+          location: {
+            address: '北京市东城区景山前街4号',
+            lat: 39.9163,
+            lng: 116.3972
+          },
           description: '中国古代皇家宫殿',
           cost: 60,
           duration: 180,
@@ -102,6 +105,7 @@ const createMockItinerary = () => ({
     food: 1000,
     tickets: 300,
     shopping: 200,
+    entertainment: 0,
     other: 0,
     total: 4500
   },
@@ -126,6 +130,7 @@ const createMockAIItineraryResponse = () => ({
   },
   dailySchedule: [
     {
+      day: 1,
       date: '2026-04-01',
       dayOfWeek: '星期三',
       theme: '故宫一日游',
@@ -134,9 +139,11 @@ const createMockAIItineraryResponse = () => ({
           time: '09:00',
           type: 'attraction' as const,
           name: '故宫博物院',
-          address: '北京市东城区景山前街4号',
-          latitude: 39.9163,
-          longitude: 116.3972,
+          location: {
+            address: '北京市东城区景山前街4号',
+            lat: 39.9163,
+            lng: 116.3972
+          },
           description: '中国古代皇家宫殿',
           cost: 60,
           duration: 180,
@@ -151,6 +158,7 @@ const createMockAIItineraryResponse = () => ({
     food: 1000,
     tickets: 300,
     shopping: 200,
+    entertainment: 0,
     other: 0,
     total: 4500
   },

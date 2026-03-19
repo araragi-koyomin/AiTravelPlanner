@@ -47,25 +47,25 @@
 
 ### 1.2 技术栈清单
 
-| 层级 | 技术 | 版本 | 用途 |
-|------|------|------|------|
-| 前端框架 | React | 18.x | UI 框架 |
-| 前端语言 | TypeScript | 5.x | 类型安全 |
-| 构建工具 | Vite | 5.x | 构建和开发服务器 |
-| 状态管理 | Zustand | 4.x | 全局状态管理 |
-| 路由 | React Router | 6.x | 前端路由 |
-| UI 组件库 | shadcn/ui | latest | UI 组件 |
-| 样式 | TailwindCSS | 3.x | CSS 框架 |
-| HTTP 客户端 | Axios | 1.x | API 请求 |
-| 地图服务 | 高德地图 JS API | 2.0 | 地图展示 |
-| 语音识别 | 科大讯飞 Web SDK | latest | 语音转文字 |
-| 后端运行时 | Deno | latest | Edge Functions |
-| 数据库 | PostgreSQL | 15.x | 数据存储 |
-| 认证服务 | Supabase Auth | latest | 用户认证 |
-| 实时同步 | Supabase Realtime | latest | 数据同步 |
-| 大语言模型 | 智谱AI GLM | 4.0 | 行程生成 |
-| 容器化 | Docker | latest | 容器部署 |
-| CI/CD | GitHub Actions | latest | 自动化部署 |
+| 层级        | 技术              | 版本   | 用途             |
+| ----------- | ----------------- | ------ | ---------------- |
+| 前端框架    | React             | 18.x   | UI 框架          |
+| 前端语言    | TypeScript        | 5.x    | 类型安全         |
+| 构建工具    | Vite              | 5.x    | 构建和开发服务器 |
+| 状态管理    | Zustand           | 4.x    | 全局状态管理     |
+| 路由        | React Router      | 6.x    | 前端路由         |
+| UI 组件库   | shadcn/ui         | latest | UI 组件          |
+| 样式        | TailwindCSS       | 3.x    | CSS 框架         |
+| HTTP 客户端 | Axios             | 1.x    | API 请求         |
+| 地图服务    | 高德地图 JS API   | 2.0    | 地图展示         |
+| 语音识别    | 科大讯飞 Web SDK  | latest | 语音转文字       |
+| 后端运行时  | Deno              | latest | Edge Functions   |
+| 数据库      | PostgreSQL        | 15.x   | 数据存储         |
+| 认证服务    | Supabase Auth     | latest | 用户认证         |
+| 实时同步    | Supabase Realtime | latest | 数据同步         |
+| 大语言模型  | 智谱AI GLM        | 4.0    | 行程生成         |
+| 容器化      | Docker            | latest | 容器部署         |
+| CI/CD       | GitHub Actions    | latest | 自动化部署       |
 
 ---
 
@@ -335,84 +335,101 @@ serve(async (req) => {
 
 ### 3.3 数据库设计
 
+> **详细设计请参考**: [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)
+
 #### 3.3.1 表结构
 
 ```sql
--- 用户表
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  name VARCHAR(100),
-  avatar TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- 用户资料表（与 auth.users 关联）
+CREATE TABLE user_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  username VARCHAR(100),
+  avatar_url TEXT,
+  preferences JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 行程表
 CREATE TABLE itineraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   title VARCHAR(255) NOT NULL,
   destination VARCHAR(255) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   budget DECIMAL(10, 2) NOT NULL,
   participants INTEGER NOT NULL,
+  travelers_type VARCHAR(50),
+  accommodation_pref VARCHAR(50),
+  pace VARCHAR(50),
   preferences TEXT[],
   special_requirements TEXT,
+  status VARCHAR(50) DEFAULT 'generated',
+  cover_image TEXT,
   is_favorite BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 行程详情表
 CREATE TABLE itinerary_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
+  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
+  day INTEGER NOT NULL CHECK (day > 0),
   time VARCHAR(10) NOT NULL,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity')),
+  type VARCHAR(50) NOT NULL CHECK (type IN ('transport', 'accommodation', 'attraction', 'restaurant', 'activity', 'shopping')),
   name VARCHAR(255) NOT NULL,
-  address VARCHAR(500),
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  location JSONB NOT NULL DEFAULT '{}'::jsonb,
   description TEXT,
   cost DECIMAL(10, 2),
   duration INTEGER,
-  order_index INTEGER NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  tips TEXT,
+  image_url TEXT,
+  order_idx INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 费用记录表
 CREATE TABLE expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE,
-  category VARCHAR(50) NOT NULL CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'other')),
-  amount DECIMAL(10, 2) NOT NULL,
-  date DATE NOT NULL,
+  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE NOT NULL,
+  category VARCHAR(50) NOT NULL CHECK (category IN ('transport', 'accommodation', 'food', 'ticket', 'shopping', 'entertainment', 'other')),
+  amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+  expense_date DATE NOT NULL,
+  payment_method VARCHAR(50),
+  receipt_url TEXT,
+  notes TEXT,
   description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 用户设置表
 CREATE TABLE user_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   zhipu_api_key TEXT,
   xunfei_api_key TEXT,
   amap_api_key TEXT,
   theme VARCHAR(10) DEFAULT 'light' CHECK (theme IN ('light', 'dark')),
   language VARCHAR(5) DEFAULT 'zh' CHECK (language IN ('zh', 'en')),
   notifications BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 索引
+CREATE INDEX idx_user_profiles_username ON user_profiles(username);
+CREATE INDEX idx_user_profiles_preferences ON user_profiles USING GIN (preferences);
 CREATE INDEX idx_itineraries_user_id ON itineraries(user_id);
+CREATE INDEX idx_itineraries_status ON itineraries(status);
+CREATE INDEX idx_itineraries_user_status ON itineraries(user_id, status);
 CREATE INDEX idx_itinerary_items_itinerary_id ON itinerary_items(itinerary_id);
+CREATE INDEX idx_itinerary_items_day ON itinerary_items(day);
+CREATE INDEX idx_itinerary_items_location ON itinerary_items USING GIN (location);
+CREATE INDEX idx_itinerary_items_trip_day_order ON itinerary_items(itinerary_id, day, order_idx);
 CREATE INDEX idx_expenses_itinerary_id ON expenses(itinerary_id);
+CREATE INDEX idx_expenses_itinerary_date ON expenses(itinerary_id, expense_date);
 CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
 ```
 
@@ -420,15 +437,21 @@ CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
 
 ```sql
 -- 启用 RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
--- 用户表策略
-CREATE POLICY "Users can view own profile" ON users
+-- 用户资料表策略
+CREATE POLICY "Users can view own profile" ON user_profiles
   FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON user_profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON user_profiles
+  FOR UPDATE USING (auth.uid() = id);
 
 -- 行程表策略
 CREATE POLICY "Users can view own itineraries" ON itineraries
@@ -453,9 +476,63 @@ CREATE POLICY "Users can view own itinerary items" ON itinerary_items
     )
   );
 
+CREATE POLICY "Users can insert own itinerary items" ON itinerary_items
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = itinerary_items.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update own itinerary items" ON itinerary_items
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = itinerary_items.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own itinerary items" ON itinerary_items
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = itinerary_items.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
 -- 费用记录表策略
 CREATE POLICY "Users can view own expenses" ON expenses
   FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = expenses.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert own expenses" ON expenses
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = expenses.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update own expenses" ON expenses
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM itineraries
+      WHERE itineraries.id = expenses.itinerary_id
+      AND itineraries.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own expenses" ON expenses
+  FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM itineraries
       WHERE itineraries.id = expenses.itinerary_id
@@ -469,6 +546,9 @@ CREATE POLICY "Users can view own settings" ON user_settings
 
 CREATE POLICY "Users can update own settings" ON user_settings
   FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own settings" ON user_settings
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 ```
 
 ---

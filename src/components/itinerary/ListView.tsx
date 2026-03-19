@@ -1,7 +1,7 @@
 import type { DailyScheduleBuilt, ItineraryItem } from '@/services/itinerary'
 import { ActivityTypeLabels } from '@/types/itinerary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign } from 'lucide-react'
+import { ChevronDown, ChevronUp, MapPin, Clock, DollarSign, Lightbulb } from 'lucide-react'
 
 interface ListViewProps {
   dailySchedule: DailyScheduleBuilt[]
@@ -24,7 +24,7 @@ export function ListView({ dailySchedule, expandedDays, onToggleDay }: ListViewP
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold">
-                    {day.date.slice(8, 10)}
+                    D{day.day}
                   </div>
                   <div>
                     <CardTitle className="text-lg">{day.theme}</CardTitle>
@@ -84,16 +84,22 @@ function ItineraryItemCard({ item }: ItineraryItemCardProps) {
         <h4 className="font-semibold text-gray-900 mb-1">
           {item.name}
         </h4>
-        {item.address && (
+        {item.location?.address && (
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             <MapPin className="h-4 w-4" />
-            <span>{item.address}</span>
+            <span>{item.location.address}</span>
           </div>
         )}
         {item.description && (
           <p className="text-sm text-gray-600 mb-2">
             {item.description}
           </p>
+        )}
+        {item.tips && (
+          <div className="flex items-start gap-2 text-sm text-amber-700 mb-2 bg-amber-50 p-2 rounded">
+            <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <span>{item.tips}</span>
+          </div>
         )}
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1">

@@ -195,7 +195,8 @@ export async function duplicateItinerary(
       travelers_type: originalItinerary.travelers_type,
       accommodation_pref: originalItinerary.accommodation_pref,
       pace: originalItinerary.pace,
-      is_favorite: false
+      is_favorite: false,
+      status: 'draft'
     }
 
     const newItinerary = await createItinerary(newItineraryData)
@@ -212,17 +213,17 @@ export async function duplicateItinerary(
     if (items && items.length > 0) {
       const newItems = items.map(item => ({
         itinerary_id: newItinerary.id,
-        date: item.date,
+        day: item.day,
         time: item.time,
         type: item.type,
         name: item.name,
-        address: item.address,
-        latitude: item.latitude,
-        longitude: item.longitude,
+        location: item.location,
         description: item.description,
         cost: item.cost,
         duration: item.duration,
-        order_index: item.order_index
+        tips: item.tips,
+        image_url: item.image_url,
+        order_idx: item.order_idx
       }))
 
       await supabase.from('itinerary_items').insert(newItems)
@@ -242,7 +243,10 @@ export async function duplicateItinerary(
         itinerary_id: newItinerary.id,
         category: expense.category,
         amount: expense.amount,
-        date: expense.date,
+        expense_date: expense.expense_date,
+        payment_method: expense.payment_method,
+        receipt_url: expense.receipt_url,
+        notes: expense.notes,
         description: expense.description
       }))
 
@@ -398,8 +402,8 @@ export async function getItineraryItems(itineraryId: string): Promise<ItineraryI
       .from('itinerary_items')
       .select('*')
       .eq('itinerary_id', itineraryId)
-      .order('date', { ascending: true })
-      .order('order_index', { ascending: true })
+      .order('day', { ascending: true })
+      .order('order_idx', { ascending: true })
 
     if (error) {
       throw new SupabaseErrorClass(`获取行程项失败: ${error.message}`, error.code)
@@ -413,6 +417,7 @@ export async function getItineraryItems(itineraryId: string): Promise<ItineraryI
 }
 
 export interface DailyScheduleBuilt {
+  day: number
   date: string
   dayOfWeek: string
   theme: string
@@ -436,9 +441,11 @@ export function buildDailySchedule(
     currentDate.setDate(start.getDate() + dayIndex)
     const dateString = currentDate.toISOString().split('T')[0]
     const dayOfWeek = getDayOfWeekLabel(dateString)
-    const dayItems = items.filter(item => item.date === dateString)
+    const dayNumber = dayIndex + 1
+    const dayItems = items.filter(item => item.day === dayNumber)
 
     schedule.push({
+      day: dayNumber,
       date: dateString,
       dayOfWeek,
       theme: dayThemes[dayIndex % dayThemes.length],
@@ -455,6 +462,7 @@ export function buildBudgetBreakdown(items: ItineraryItem[]): {
   food: number
   tickets: number
   shopping: number
+  entertainment: number
   other: number
   total: number
 } {
@@ -464,6 +472,7 @@ export function buildBudgetBreakdown(items: ItineraryItem[]): {
     food: 0,
     tickets: 0,
     shopping: 0,
+    entertainment: 0,
     other: 0,
     total: 0
   }
@@ -474,7 +483,7 @@ export function buildBudgetBreakdown(items: ItineraryItem[]): {
     restaurant: 'food',
     attraction: 'tickets',
     shopping: 'shopping',
-    activity: 'other'
+    activity: 'entertainment'
   }
 
   for (const item of items) {

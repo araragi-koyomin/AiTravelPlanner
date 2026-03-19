@@ -32,6 +32,8 @@ const mockItineraries = [
     accommodation_pref: 'comfort',
     pace: 'moderate',
     is_favorite: false,
+    status: 'generated' as const,
+    cover_image: null,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z'
   },
@@ -50,6 +52,8 @@ const mockItineraries = [
     accommodation_pref: 'budget',
     pace: 'relaxed',
     is_favorite: true,
+    status: 'completed' as const,
+    cover_image: null,
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z'
   },
@@ -68,6 +72,8 @@ const mockItineraries = [
     accommodation_pref: 'comfort',
     pace: 'intense',
     is_favorite: false,
+    status: 'draft' as const,
+    cover_image: null,
     created_at: '2024-01-03T00:00:00Z',
     updated_at: '2024-01-03T00:00:00Z'
   }
