@@ -50,7 +50,6 @@ interface AIResponseItem {
   type: string
   title: string
   description: string
-  location: LocationData | string
   duration?: string
   cost: number
   ticket_info?: string
@@ -69,7 +68,6 @@ interface AIDailyItinerary {
 interface AIAccommodation {
   day: number
   hotel_name: string
-  location: LocationData | string
   price_range: string
   rating?: string
   features?: string[]
@@ -259,7 +257,8 @@ serve(async (req) => {
     }
 
     const itineraryId = savedItinerary.id
-    const dbActivities = transformToDbFormat(itinerary, itineraryId, daysCount)
+    const dbActivities = await transformToDbFormat(itinerary, itineraryId, daysCount, destination)
+    console.log('POI搜索完成，活动数量:', dbActivities.length, '有效坐标数量:', dbActivities.filter(a => a.location.lat !== 0).length)
 
     if (dbActivities.length > 0) {
       const { error: itemsError } = await supabase
@@ -382,29 +381,247 @@ function parseAIResponse(content: string): AIGeneratedItinerary {
   }
 }
 
-function parseLocation(location: LocationData | string | undefined): LocationData {
-  if (!location) {
-    return { address: '', lat: 0, lng: 0 }
+interface POISearchResult {
+  poi_id: string
+  name: string
+  address: string
+  lat: number
+  lng: number
+  city: string
+  district: string
+}
+
+function extractCityName(destination: string): string {
+  if (!destination) return ''
+
+  const cityMatch = destination.match(/(?:中国)?(.+?)(?:市|省|$)/)
+  if (cityMatch && cityMatch[1]) {
+    return cityMatch[1].replace(/省$/, '')
   }
-  if (typeof location === 'string') {
-    return { address: location, lat: 0, lng: 0 }
-  }
-  return {
-    address: location.address || '',
-    lat: location.lat || 0,
-    lng: location.lng || 0,
-    poi_id: location.poi_id,
-    city: location.city,
-    district: location.district
+
+  const parts = destination.replace('中国', '').trim().split(/[省市]/)
+  return parts[0] || destination
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  if (lat1 === 0 || lng1 === 0 || lat2 === 0 || lng2 === 0) return Infinity
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function getTransportSuggestion(distance: number): string {
+  const distanceKm = distance / 1000
+
+  if (distance <= 500) {
+    return `步行约${Math.round(distance / 80)}分钟`
+  } else if (distance <= 2000) {
+    return `步行约${Math.round(distance / 80)}分钟，或骑行约${Math.round(distance / 250)}分钟`
+  } else if (distance <= 5000) {
+    return `建议打车或地铁，约${Math.round(distance / 400)}分钟，距离${distanceKm.toFixed(1)}公里`
+  } else {
+    return `建议地铁或打车，约${Math.round(distance / 400)}分钟，距离${distanceKm.toFixed(1)}公里`
   }
 }
 
-function transformToDbFormat(
+function optimizeRouteByDay(activities: DbActivity[]): DbActivity[] {
+  const dayGroups = new Map<number, DbActivity[]>()
+  for (const activity of activities) {
+    const dayActivities = dayGroups.get(activity.day) || []
+    dayActivities.push(activity)
+    dayGroups.set(activity.day, dayActivities)
+  }
+
+  const optimizedActivities: DbActivity[] = []
+
+  for (const [day, dayActivities] of dayGroups) {
+    if (dayActivities.length <= 1) {
+      optimizedActivities.push(...dayActivities)
+      continue
+    }
+
+    const nonAccommodation = dayActivities.filter(a => a.type !== 'accommodation')
+    const accommodations = dayActivities.filter(a => a.type === 'accommodation')
+
+    const result = [...nonAccommodation].sort((a, b) => a.time.localeCompare(b.time))
+
+    for (let i = 0; i < result.length - 1; i++) {
+      const current = result[i]
+      const next = result[i + 1]
+
+      const distance = calculateDistance(
+        current.location.lat, current.location.lng,
+        next.location.lat, next.location.lng
+      )
+
+      if (distance !== Infinity && distance > 100) {
+        const transportInfo = getTransportSuggestion(distance)
+        const nextName = next.name || '下一站'
+
+        if (current.tips) {
+          current.tips = `${current.tips}\n前往${nextName}：${transportInfo}`
+        } else {
+          current.tips = `前往${nextName}：${transportInfo}`
+        }
+      }
+    }
+
+    if (accommodations.length > 0 && result.length > 0) {
+      const lastActivity = result[result.length - 1]
+      const lastHour = parseInt(lastActivity.time.split(':')[0], 10)
+      const accommodationHour = Math.max(lastHour + 2, 21)
+      accommodations[0].time = `${accommodationHour.toString().padStart(2, '0')}:00`
+
+      const distance = calculateDistance(
+        lastActivity.location.lat, lastActivity.location.lng,
+        accommodations[0].location.lat, accommodations[0].location.lng
+      )
+
+      if (distance !== Infinity && distance > 100) {
+        const transportInfo = getTransportSuggestion(distance)
+        if (lastActivity.tips) {
+          lastActivity.tips = `${lastActivity.tips}\n前往${accommodations[0].name}：${transportInfo}`
+        } else {
+          lastActivity.tips = `前往${accommodations[0].name}：${transportInfo}`
+        }
+      }
+    }
+
+    result.forEach((activity, index) => {
+      activity.order_idx = optimizedActivities.length + index
+    })
+
+    optimizedActivities.push(...result)
+
+    accommodations.forEach((activity, index) => {
+      activity.order_idx = optimizedActivities.length + index
+    })
+    optimizedActivities.push(...accommodations)
+  }
+
+  return optimizedActivities.sort((a, b) => {
+    if (a.day !== b.day) return a.day - b.day
+    return a.order_idx - b.order_idx
+  })
+}
+
+async function searchPOI(keywords: string, targetCity: string): Promise<POISearchResult | null> {
+  const amapKey = Deno.env.get('AMAP_WEB_API_KEY')
+  if (!amapKey || !keywords) {
+    return null
+  }
+
+  const city = extractCityName(targetCity)
+  const enhancedKeywords = `${city}${keywords}`
+
+  console.log('POI搜索:', keywords, '城市:', city, '增强关键词:', enhancedKeywords)
+
+  try {
+    const params = new URLSearchParams({
+      key: amapKey,
+      keywords: enhancedKeywords,
+      city: city,
+      citylimit: 'true',
+      offset: '3',
+      page: '1',
+      extensions: 'base',
+    })
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    try {
+      const response = await fetch(
+        `https://restapi.amap.com/v3/place/text?${params.toString()}`,
+        { signal: controller.signal }
+      )
+      clearTimeout(timeoutId)
+
+      const data = await response.json()
+      console.log('POI搜索响应:', keywords, 'status:', data.status, 'pois count:', data.pois?.length || 0, 'info:', data.info || '')
+
+      if (data.status === '1' && data.pois && data.pois.length > 0) {
+        for (const poi of data.pois) {
+          console.log('检查POI:', poi.name, '城市:', poi.cityname, '位置:', poi.location)
+
+          if (!poi.location || poi.location === '0,0') {
+            continue
+          }
+
+          const poiCity = (poi.cityname || '').replace('市', '')
+          const targetCityName = city.replace('市', '')
+
+          if (poiCity.includes(targetCityName) || targetCityName.includes(poiCity)) {
+            const [lng, lat] = poi.location.split(',').map(Number)
+            const address = poi.address || `${poi.pname || ''}${poi.cityname || ''}${poi.adname || ''}${poi.name || ''}`
+
+            console.log('POI匹配成功:', poi.name, '->', address, lat, lng)
+
+            return {
+              poi_id: poi.id,
+              name: poi.name,
+              address: address,
+              lat,
+              lng,
+              city: poi.cityname || '',
+              district: poi.adname || ''
+            }
+          }
+        }
+
+        console.log('POI搜索结果城市不匹配:', keywords, '目标城市:', city)
+      } else {
+        console.log('POI搜索无结果:', keywords, 'response:', JSON.stringify(data))
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      console.error('POI搜索超时或失败:', keywords, fetchError)
+    }
+  } catch (error) {
+    console.error('POI搜索异常:', keywords, error)
+  }
+
+  return null
+}
+
+async function searchLocationByName(name: string, destination: string): Promise<LocationData> {
+  const poi = await searchPOI(name, destination)
+  if (poi) {
+    return {
+      address: poi.address,
+      lat: poi.lat,
+      lng: poi.lng,
+      poi_id: poi.poi_id,
+      city: poi.city,
+      district: poi.district
+    }
+  }
+
+  console.log('POI搜索失败:', name)
+  return { address: '', lat: 0, lng: 0 }
+}
+
+async function transformToDbFormat(
   itinerary: AIGeneratedItinerary,
   itineraryId: string,
-  daysCount: number
-): DbActivity[] {
+  daysCount: number,
+  destination: string
+): Promise<DbActivity[]> {
   const activities: DbActivity[] = []
+  const locationItems: Array<{
+    day: number
+    item: AIResponseItem | null
+    accommodation: AIAccommodation | null
+    orderIndex: number
+  }> = []
   let orderIndex = 0
 
   for (let day = 1; day <= daysCount; day++) {
@@ -412,45 +629,93 @@ function transformToDbFormat(
 
     if (dayItinerary?.items) {
       for (const item of dayItinerary.items) {
-        const normalizedType = normalizeActivityType(item.type)
-
-        activities.push({
-          itinerary_id: itineraryId,
-          day: day,
-          time: item.time || '09:00',
-          type: normalizedType,
-          name: item.title || '未命名活动',
-          location: parseLocation(item.location),
-          description: item.description || '',
-          cost: parseCost(item.cost),
-          duration: parseDuration(item.duration),
-          tips: item.tips || null,
-          image_url: null,
-          order_idx: orderIndex++
+        locationItems.push({
+          day,
+          item,
+          accommodation: null,
+          orderIndex: orderIndex++
         })
       }
     }
 
     const dayAccommodation = itinerary.accommodation?.find(a => a.day === day)
-    if (dayAccommodation) {
+    if (dayAccommodation && day < daysCount) {
+      locationItems.push({
+        day,
+        item: null,
+        accommodation: dayAccommodation,
+        orderIndex: orderIndex++
+      })
+    }
+  }
+
+  console.log('开始串行搜索', locationItems.length, '个地点...')
+
+  const enrichedLocations: LocationData[] = []
+  for (let i = 0; i < locationItems.length; i++) {
+    const { item, accommodation } = locationItems[i]
+
+    let location: LocationData = { address: '', lat: 0, lng: 0 }
+
+    if (item) {
+      location = await searchLocationByName(item.title || '', destination)
+    } else if (accommodation) {
+      location = await searchLocationByName(accommodation.hotel_name || '', destination)
+    }
+
+    enrichedLocations.push(location)
+
+    if (i < locationItems.length - 1) {
+      await sleep(200)
+    }
+  }
+
+  const validCount = enrichedLocations.filter(l => l.lat !== 0).length
+  console.log('POI搜索完成，总数:', enrichedLocations.length, '有效:', validCount)
+
+  for (let i = 0; i < locationItems.length; i++) {
+    const { day, item, accommodation, orderIndex: idx } = locationItems[i]
+    const location = enrichedLocations[i]
+
+    if (item) {
+      const normalizedType = normalizeActivityType(item.type)
+      activities.push({
+        itinerary_id: itineraryId,
+        day: day,
+        time: item.time || '09:00',
+        type: normalizedType,
+        name: item.title || '未命名活动',
+        location,
+        description: item.description || '',
+        cost: parseCost(item.cost),
+        duration: parseDuration(item.duration),
+        tips: item.tips || null,
+        image_url: null,
+        order_idx: idx
+      })
+    } else if (accommodation) {
       activities.push({
         itinerary_id: itineraryId,
         day: day,
         time: '18:00',
         type: 'accommodation',
-        name: dayAccommodation.hotel_name || '住宿',
-        location: parseLocation(dayAccommodation.location),
-        description: `${dayAccommodation.price_range || ''} ${dayAccommodation.features?.join('、') || ''}`.trim(),
-        cost: parsePriceRange(dayAccommodation.price_range),
+        name: accommodation.hotel_name || '住宿',
+        location,
+        description: `${accommodation.price_range || ''} ${accommodation.features?.join('、') || ''}`.trim(),
+        cost: parsePriceRange(accommodation.price_range),
         duration: 0,
-        tips: dayAccommodation.booking_tips || null,
+        tips: accommodation.booking_tips || null,
         image_url: null,
-        order_idx: orderIndex++
+        order_idx: idx
       })
     }
   }
 
-  return activities
+  console.log('开始路线优化...')
+  const optimizedActivities = optimizeRouteByDay(activities)
+  console.log('路线优化完成，活动数量:', optimizedActivities.length)
+
+  return optimizedActivities
 }
 
 function normalizeActivityType(type: string): ActivityType {
