@@ -3,8 +3,7 @@ import {
   HistoryManager,
   createHistoryManager,
   generateItemId,
-  isTempId,
-  type HistoryEntry
+  isTempId
 } from './historyManager'
 
 describe('historyManager', () => {

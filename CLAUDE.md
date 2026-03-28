@@ -102,6 +102,8 @@ AiTravelPlanner/
 | `test_report/Task2.5-高德地图集成验收报告.md`     | 高德地图集成验收报告      |
 | `test_report/Task2.6-行程编辑功能测试报告.md`     | 行程编辑功能测试报告      |
 | `test_report/Task2.6-行程编辑功能验收报告.md`     | 行程编辑功能验收报告      |
+| `test_report/Task2.7-行程列表管理测试报告.md`     | 行程列表管理测试报告      |
+| `test_report/Task2.7-行程列表管理验收报告.md`     | 行程列表管理验收报告      |
 
 ### 文档模板
 
