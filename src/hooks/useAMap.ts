@@ -195,7 +195,7 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
     return () => {
       destroyMap()
     }
-  }, [autoLoad])
+  }, [autoLoad, initMap, destroyMap])
 
   return {
     map,

@@ -7,14 +7,20 @@ import {
   getItineraryItems,
   buildDailySchedule,
   buildBudgetBreakdown,
+  batchCreateItineraryItems,
+  batchUpdateItineraryItems,
+  batchDeleteItineraryItems,
   type DailyScheduleBuilt,
   type ItineraryItem
 } from '@/services/itinerary'
 import { useAuthStore } from '@/stores/authStore'
+import { useItineraryEditStore } from '@/stores/itineraryEditStore'
 import { ItineraryDetailSkeleton } from '@/components/ui/Skeleton'
 import { MapPin, Calendar, Users, DollarSign, Clock, UserCircle, Home, Gauge, Map } from 'lucide-react'
 import { ListView } from '@/components/itinerary/ListView'
 import { TimelineView } from '@/components/itinerary/TimelineView'
+import { EditToolbar } from '@/components/itinerary/EditToolbar'
+import { UnsavedChangesModal } from '@/components/itinerary/UnsavedChangesModal'
 import {
   TravelersTypeLabels,
   AccommodationPreferenceLabels,
@@ -37,7 +43,30 @@ export function ItineraryDetail() {
   const [viewMode, setViewMode] = useState<'list' | 'timeline' | 'map'>('list')
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set())
   const [mapInView, setMapInView] = useState(false)
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [pendingExit, setPendingExit] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
+
+  const {
+    isEditMode,
+    hasUnsavedChanges,
+    editingItemId,
+    items: editItems,
+    isSaving,
+    enterEditMode,
+    exitEditMode,
+    setEditingItem,
+    updateItem,
+    addItem,
+    deleteItem,
+    reorderItems,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    getChangedItems,
+    markAsSaved
+  } = useItineraryEditStore()
 
   const loadItinerary = useCallback(async () => {
     if (!id) {
@@ -101,6 +130,41 @@ export function ItineraryDetail() {
     }
   }, [viewMode])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isEditMode) return
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault()
+        redo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isEditMode, undo, redo])
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
   const toggleDay = (dayIndex: number) => {
     setExpandedDays(prev => {
       const newSet = new Set(prev)
@@ -122,14 +186,113 @@ export function ItineraryDetail() {
     }
   }
 
+  const handleEnterEditMode = useCallback(() => {
+    if (!id || !itinerary) return
+    enterEditMode(id, items)
+    const totalDays = Math.ceil(
+      (new Date(itinerary.end_date).getTime() - new Date(itinerary.start_date).getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1
+    setExpandedDays(new Set(Array.from({ length: totalDays }, (_, i) => i)))
+  }, [id, items, enterEditMode, itinerary])
+
+  const handleExitEditMode = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedModal(true)
+      setPendingExit(true)
+    } else {
+      exitEditMode()
+    }
+  }, [hasUnsavedChanges, exitEditMode])
+
+  const handleSave = useCallback(async () => {
+    const { added, updated, deleted } = getChangedItems()
+
+    try {
+      if (added.length > 0) {
+        const itemsToCreate = added.map(item => ({
+          itinerary_id: item.itinerary_id,
+          day: item.day,
+          time: item.time,
+          type: item.type,
+          name: item.name,
+          location: item.location,
+          description: item.description,
+          cost: item.cost,
+          duration: item.duration,
+          tips: item.tips,
+          image_url: item.image_url,
+          order_idx: item.order_idx
+        }))
+        await batchCreateItineraryItems(itemsToCreate)
+      }
+
+      if (updated.length > 0) {
+        const updates = updated.map(item => ({
+          id: item.id,
+          data: {
+            day: item.day,
+            time: item.time,
+            type: item.type,
+            name: item.name,
+            location: item.location,
+            description: item.description,
+            cost: item.cost,
+            duration: item.duration,
+            tips: item.tips,
+            order_idx: item.order_idx
+          }
+        }))
+        await batchUpdateItineraryItems(updates)
+      }
+
+      if (deleted.length > 0) {
+        await batchDeleteItineraryItems(deleted.map(item => item.id))
+      }
+
+      markAsSaved()
+
+      await loadItinerary()
+
+      if (pendingExit) {
+        exitEditMode()
+        setPendingExit(false)
+      }
+    } catch (err) {
+      console.error('保存失败:', err)
+      alert('保存失败，请重试')
+    }
+  }, [getChangedItems, markAsSaved, loadItinerary, pendingExit, exitEditMode])
+
+  const handleDiscardChanges = useCallback(() => {
+    exitEditMode()
+    setShowUnsavedModal(false)
+    setPendingExit(false)
+  }, [exitEditMode])
+
+  const handleAddItem = useCallback((day: number) => {
+    addItem(day, {
+      time: '09:00',
+      type: 'attraction',
+      name: '',
+      location: { address: '', lat: 0, lng: 0 },
+      description: null,
+      cost: null,
+      duration: null,
+      tips: null,
+      image_url: null
+    })
+  }, [addItem])
+
+  const displayItems = isEditMode ? editItems.filter(i => !i.isDeleted) : items
+
   const dailySchedule: DailyScheduleBuilt[] = useMemo(() => {
     if (!itinerary) return []
-    return buildDailySchedule(itinerary.start_date, itinerary.end_date, items)
-  }, [itinerary, items])
+    return buildDailySchedule(itinerary.start_date, itinerary.end_date, displayItems)
+  }, [itinerary, displayItems])
 
   const budgetBreakdown = useMemo(() => {
-    return buildBudgetBreakdown(items)
-  }, [items])
+    return buildBudgetBreakdown(displayItems)
+  }, [displayItems])
 
   const stats = useMemo(() => {
     if (!itinerary) return null
@@ -139,17 +302,17 @@ export function ItineraryDetail() {
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
     const itemsByType: Record<string, number> = {}
-    items.forEach(item => {
+    displayItems.forEach(item => {
       itemsByType[item.type] = (itemsByType[item.type] || 0) + 1
     })
 
     return {
       totalDays,
       totalCost: budgetBreakdown.total,
-      totalItems: items.length,
+      totalItems: displayItems.length,
       itemsByType
     }
-  }, [itinerary, items, budgetBreakdown])
+  }, [itinerary, displayItems, budgetBreakdown])
 
   if (loading) {
     return <ItineraryDetailSkeleton />
@@ -179,16 +342,37 @@ export function ItineraryDetail() {
 
   return (
     <div className="container py-12">
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/itineraries')}
-          className="mb-4"
-        >
-          ← 返回
-        </Button>
-        <h1 className="text-3xl font-bold text-gray-900">{itinerary.title}</h1>
-        <p className="mt-2 text-gray-600">{itinerary.destination}</p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                setShowUnsavedModal(true)
+                setPendingExit(true)
+              } else {
+                navigate('/itineraries')
+              }
+            }}
+            className="mb-4"
+          >
+            ← 返回
+          </Button>
+          <h1 className="text-3xl font-bold text-gray-900">{itinerary.title}</h1>
+          <p className="mt-2 text-gray-600">{itinerary.destination}</p>
+        </div>
+        <EditToolbar
+          isEditMode={isEditMode}
+          hasUnsavedChanges={hasUnsavedChanges}
+          canUndo={canUndo()}
+          canRedo={canRedo()}
+          isSaving={isSaving}
+          onEnterEdit={handleEnterEditMode}
+          onExitEdit={handleExitEditMode}
+          onSave={handleSave}
+          onUndo={undo}
+          onRedo={redo}
+        />
       </div>
 
       <Card className="mb-8">
@@ -268,30 +452,32 @@ export function ItineraryDetail() {
 
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">每日行程</h2>
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'list' ? 'primary' : 'outline'}
-            onClick={() => setViewMode('list')}
-          >
-            列表视图
-          </Button>
-          <Button
-            variant={viewMode === 'timeline' ? 'primary' : 'outline'}
-            onClick={() => setViewMode('timeline')}
-          >
-            时间轴视图
-          </Button>
-          <Button
-            variant={viewMode === 'map' ? 'primary' : 'outline'}
-            onClick={() => setViewMode('map')}
-          >
-            <Map className="w-4 h-4 mr-1" />
-            地图视图
-          </Button>
-        </div>
+        {!isEditMode && (
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'list' ? 'primary' : 'outline'}
+              onClick={() => setViewMode('list')}
+            >
+              列表视图
+            </Button>
+            <Button
+              variant={viewMode === 'timeline' ? 'primary' : 'outline'}
+              onClick={() => setViewMode('timeline')}
+            >
+              时间轴视图
+            </Button>
+            <Button
+              variant={viewMode === 'map' ? 'primary' : 'outline'}
+              onClick={() => setViewMode('map')}
+            >
+              <Map className="w-4 h-4 mr-1" />
+              地图视图
+            </Button>
+          </div>
+        )}
       </div>
 
-      {viewMode !== 'map' && (
+      {!isEditMode && viewMode !== 'map' && (
         <div className="mb-4">
           <Button variant="ghost" onClick={toggleAllDays}>
             {expandedDays.size === dailySchedule.length ? '折叠全部' : '展开全部'}
@@ -299,11 +485,18 @@ export function ItineraryDetail() {
         </div>
       )}
 
-      {viewMode === 'list' ? (
+      {isEditMode || viewMode === 'list' ? (
         <ListView
           dailySchedule={dailySchedule}
           expandedDays={expandedDays}
           onToggleDay={toggleDay}
+          isEditMode={isEditMode}
+          editingItemId={editingItemId}
+          onEditItem={setEditingItem}
+          onUpdateItem={updateItem}
+          onDeleteItem={deleteItem}
+          onAddItem={handleAddItem}
+          onReorderItems={reorderItems}
         />
       ) : viewMode === 'timeline' ? (
         <TimelineView
@@ -315,7 +508,7 @@ export function ItineraryDetail() {
         <div ref={mapContainerRef}>
           {mapInView ? (
             <Suspense fallback={<div className="h-[500px] flex items-center justify-center bg-gray-100 rounded-lg"><ItineraryDetailSkeleton /></div>}>
-              <ItineraryMapView items={items} />
+              <ItineraryMapView items={displayItems} />
             </Suspense>
           ) : (
             <div className="h-[500px] flex items-center justify-center bg-gray-100 rounded-lg">
@@ -382,6 +575,17 @@ export function ItineraryDetail() {
           </div>
         </CardContent>
       </Card>
+
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onClose={() => {
+          setShowUnsavedModal(false)
+          setPendingExit(false)
+        }}
+        onSave={handleSave}
+        onDiscard={handleDiscardChanges}
+        isSaving={isSaving}
+      />
     </div>
   )
 }

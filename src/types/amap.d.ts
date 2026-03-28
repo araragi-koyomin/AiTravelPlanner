@@ -1,4 +1,4 @@
-import type { AMapOptions, AMapInstance, AMapGeolocation, AMapGeolocationResult, AMapBounds } from './map'
+import type { AMapOptions, AMapInstance, AMapGeolocation, AMapBounds } from './map'
 
 export type { AMapInstance } from './map'
 

@@ -98,6 +98,10 @@ AiTravelPlanner/
 | `test_report/Task2.2-AI行程生成集成验收报告.md`   | AI 行程生成集成验收报告   |
 | `test_report/Task2.3-行程展示功能测试报告.md`     | 行程展示功能测试报告      |
 | `test_report/Task2.3-行程展示功能验收报告.md`     | 行程展示功能验收报告      |
+| `test_report/Task2.5-高德地图集成测试报告.md`     | 高德地图集成测试报告      |
+| `test_report/Task2.5-高德地图集成验收报告.md`     | 高德地图集成验收报告      |
+| `test_report/Task2.6-行程编辑功能测试报告.md`     | 行程编辑功能测试报告      |
+| `test_report/Task2.6-行程编辑功能验收报告.md`     | 行程编辑功能验收报告      |
 
 ### 文档模板
 
@@ -257,7 +261,7 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-20
+**最后更新**: 2026-03-29
 
 ## 数据库重构说明
 

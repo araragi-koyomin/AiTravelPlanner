@@ -509,3 +509,146 @@ function getDayOfWeekLabel(dateString: string): string {
   const date = new Date(dateString)
   return DAY_OF_WEEK_LABELS[date.getDay()]
 }
+
+export type ItineraryItemInsert = TablesInsert<'itinerary_items'>
+export type ItineraryItemUpdate = TablesUpdate<'itinerary_items'>
+
+export async function createItineraryItem(
+  itemData: ItineraryItemInsert
+): Promise<ItineraryItem> {
+  try {
+    const { data, error } = await supabase
+      .from('itinerary_items')
+      .insert(itemData)
+      .select()
+      .single()
+
+    if (error) {
+      throw new SupabaseErrorClass(`创建行程项失败: ${error.message}`, error.code)
+    }
+
+    if (!data) {
+      throw new SupabaseErrorClass('创建行程项失败')
+    }
+
+    return data
+  } catch (error) {
+    console.error('创建行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('创建行程项失败')
+  }
+}
+
+export async function updateItineraryItem(
+  id: string,
+  itemData: ItineraryItemUpdate
+): Promise<ItineraryItem> {
+  try {
+    const { data, error } = await supabase
+      .from('itinerary_items')
+      .update(itemData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      throw new SupabaseErrorClass(`更新行程项失败: ${error.message}`, error.code)
+    }
+
+    if (!data) {
+      throw new SupabaseErrorClass('更新行程项失败')
+    }
+
+    return data
+  } catch (error) {
+    console.error('更新行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('更新行程项失败')
+  }
+}
+
+export async function deleteItineraryItem(id: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('itinerary_items')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      throw new SupabaseErrorClass(`删除行程项失败: ${error.message}`, error.code)
+    }
+  } catch (error) {
+    console.error('删除行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('删除行程项失败')
+  }
+}
+
+export async function batchCreateItineraryItems(
+  items: ItineraryItemInsert[]
+): Promise<ItineraryItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('itinerary_items')
+      .insert(items)
+      .select()
+
+    if (error) {
+      throw new SupabaseErrorClass(`批量创建行程项失败: ${error.message}`, error.code)
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('批量创建行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('批量创建行程项失败')
+  }
+}
+
+export async function batchUpdateItineraryItems(
+  updates: Array<{ id: string; data: ItineraryItemUpdate }>
+): Promise<ItineraryItem[]> {
+  try {
+    const results: ItineraryItem[] = []
+
+    for (const { id, data } of updates) {
+      const updated = await updateItineraryItem(id, data)
+      results.push(updated)
+    }
+
+    return results
+  } catch (error) {
+    console.error('批量更新行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('批量更新行程项失败')
+  }
+}
+
+export async function batchDeleteItineraryItems(ids: string[]): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('itinerary_items')
+      .delete()
+      .in('id', ids)
+
+    if (error) {
+      throw new SupabaseErrorClass(`批量删除行程项失败: ${error.message}`, error.code)
+    }
+  } catch (error) {
+    console.error('批量删除行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('批量删除行程项失败')
+  }
+}
+
+export async function reorderItineraryItems(
+  itineraryId: string,
+  orders: Array<{ id: string; day: number; order_idx: number }>
+): Promise<void> {
+  try {
+    for (const { id, day, order_idx } of orders) {
+      await supabase
+        .from('itinerary_items')
+        .update({ day, order_idx })
+        .eq('id', id)
+        .eq('itinerary_id', itineraryId)
+    }
+  } catch (error) {
+    console.error('重排序行程项失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('重排序行程项失败')
+  }
+}
