@@ -602,4 +602,703 @@ describe('Itinerary Service', () => {
       expect(mockQuery.or).toHaveBeenCalled()
     })
   })
+
+  describe('getItineraryItems', () => {
+    it('应该成功获取行程项列表', async () => {
+      const mockItems = [
+        { id: 'item-1', itinerary_id: 'itinerary-1', day: 1, order_idx: 0, name: '景点A' },
+        { id: 'item-2', itinerary_id: 'itinerary-1', day: 1, order_idx: 1, name: '景点B' }
+      ]
+      const mockResult = { data: mockItems, error: null }
+      const mockQuery = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        then: (resolve: (value: typeof mockResult) => void) => Promise.resolve(mockResult).then(resolve)
+      }
+
+      vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnValue(mockQuery)
+      } as any)
+
+      const result = await itineraryService.getItineraryItems('itinerary-1')
+
+      expect(result).toEqual(mockItems)
+      expect(mockQuery.eq).toHaveBeenCalledWith('itinerary_id', 'itinerary-1')
+    })
+
+    it('应该返回空数组当没有行程项', async () => {
+      const mockResult = { data: null, error: null }
+      const mockQuery = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        then: (resolve: (value: typeof mockResult) => void) => Promise.resolve(mockResult).then(resolve)
+      }
+
+      vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnValue(mockQuery)
+      } as any)
+
+      const result = await itineraryService.getItineraryItems('itinerary-1')
+
+      expect(result).toEqual([])
+    })
+
+    it('应该处理获取失败', async () => {
+      const mockResult = { data: null, error: { message: '获取失败', code: 'DB_ERROR' } }
+      const mockQuery = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        then: (resolve: (value: typeof mockResult) => void) => Promise.resolve(mockResult).then(resolve)
+      }
+
+      vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnValue(mockQuery)
+      } as any)
+
+      await expect(
+        itineraryService.getItineraryItems('itinerary-1')
+      ).rejects.toThrow('获取行程项失败')
+    })
+  })
+
+  describe('createItineraryItem', () => {
+    const mockItem = {
+      id: 'item-1',
+      itinerary_id: 'itinerary-1',
+      day: 1,
+      time: '09:00',
+      type: 'attraction',
+      name: '测试景点',
+      location: { address: '测试地址', lat: 0, lng: 0 },
+      description: null,
+      cost: null,
+      duration: null,
+      tips: null,
+      image_url: null,
+      order_idx: 0,
+      created_at: '2024-01-01T00:00:00Z'
+    }
+
+    it('应该成功创建行程项', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: mockItem,
+            error: null
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      const result = await itineraryService.createItineraryItem({
+        itinerary_id: 'itinerary-1',
+        day: 1,
+        time: '09:00',
+        type: 'attraction',
+        name: '测试景点',
+        location: { address: '测试地址', lat: 0, lng: 0 },
+        order_idx: 0
+      })
+
+      expect(result).toEqual(mockItem)
+      expect(mockInsert).toHaveBeenCalled()
+    })
+
+    it('应该处理创建失败', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: '创建失败', code: 'DB_ERROR' }
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      await expect(
+        itineraryService.createItineraryItem({
+          itinerary_id: 'itinerary-1',
+          day: 1,
+          time: '09:00',
+          type: 'attraction',
+          name: '测试景点',
+          location: { address: '测试地址', lat: 0, lng: 0 },
+          order_idx: 0
+        })
+      ).rejects.toThrow('创建行程项失败')
+    })
+
+    it('应该抛出 SupabaseError 当创建失败', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: '数据库错误', code: 'DB_ERROR' }
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      await expect(
+        itineraryService.createItineraryItem({
+          itinerary_id: 'itinerary-1',
+          day: 1,
+          name: '测试景点',
+          time: '09:00',
+          type: 'attraction',
+          location: { address: '', lat: 0, lng: 0 },
+          order_idx: 0
+        })
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('updateItineraryItem', () => {
+    const mockItem = {
+      id: 'item-1',
+      itinerary_id: 'itinerary-1',
+      day: 1,
+      time: '09:00',
+      type: 'attraction',
+      name: '更新后的景点',
+      location: { address: '测试地址', lat: 0, lng: 0 },
+      description: null,
+      cost: null,
+      duration: null,
+      tips: null,
+      image_url: null,
+      order_idx: 0,
+      created_at: '2024-01-01T00:00:00Z'
+    }
+
+    it('应该成功更新行程项', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockItem,
+              error: null
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      const result = await itineraryService.updateItineraryItem('item-1', {
+        name: '更新后的景点'
+      })
+
+      expect(result.name).toBe('更新后的景点')
+      expect(mockUpdate).toHaveBeenCalled()
+    })
+
+    it('应该返回更新后的行程项', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockItem,
+              error: null
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      const result = await itineraryService.updateItineraryItem('item-1', {
+        name: '更新后的景点'
+      })
+
+      expect(result).toEqual(mockItem)
+    })
+
+    it('应该处理更新失败', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: '更新失败', code: 'DB_ERROR' }
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.updateItineraryItem('item-1', { name: '更新后的景点' })
+      ).rejects.toThrow('更新行程项失败')
+    })
+
+    it('应该抛出 SupabaseError 当更新失败', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: '数据库错误', code: 'DB_ERROR' }
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.updateItineraryItem('item-1', { name: '更新后的景点' })
+      ).rejects.toThrow()
+    })
+
+    it('应该处理不存在的行程项', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Not found', code: 'PGRST116' }
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.updateItineraryItem('non-existent', { name: '更新' })
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('deleteItineraryItem', () => {
+    it('应该成功删除行程项', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.deleteItineraryItem('item-1')
+      ).resolves.not.toThrow()
+    })
+
+    it('应该处理删除失败', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          error: { message: '删除失败', code: 'DB_ERROR' }
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.deleteItineraryItem('item-1')
+      ).rejects.toThrow('删除行程项失败')
+    })
+
+    it('应该抛出 SupabaseError 当删除失败', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          error: { message: '数据库错误', code: 'DB_ERROR' }
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.deleteItineraryItem('item-1')
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('batchCreateItineraryItems', () => {
+    const mockItems = [
+      { id: 'item-1', itinerary_id: 'itinerary-1', day: 1, name: '景点A', time: '09:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'item-2', itinerary_id: 'itinerary-1', day: 1, name: '景点B', time: '10:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 1, created_at: '2024-01-01T00:00:00Z' }
+    ]
+
+    it('应该成功批量创建行程项', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          data: mockItems,
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      const result = await itineraryService.batchCreateItineraryItems([
+        { itinerary_id: 'itinerary-1', day: 1, name: '景点A', time: '09:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0 },
+        { itinerary_id: 'itinerary-1', day: 1, name: '景点B', time: '10:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 1 }
+      ])
+
+      expect(result).toEqual(mockItems)
+      expect(mockInsert).toHaveBeenCalled()
+    })
+
+    it('应该返回创建的行程项数组', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          data: mockItems,
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      const result = await itineraryService.batchCreateItineraryItems([
+        { itinerary_id: 'itinerary-1', day: 1, name: '景点A', time: '09:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0 }
+      ])
+
+      expect(Array.isArray(result)).toBe(true)
+      expect(result).toHaveLength(2)
+    })
+
+    it('应该处理批量创建失败', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: '批量创建失败', code: 'DB_ERROR' }
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      await expect(
+        itineraryService.batchCreateItineraryItems([
+          { itinerary_id: 'itinerary-1', day: 1, name: '景点A', time: '09:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0 }
+        ])
+      ).rejects.toThrow('批量创建行程项失败')
+    })
+
+    it('应该正确处理空数组', async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          data: [],
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        insert: mockInsert
+      } as any)
+
+      const result = await itineraryService.batchCreateItineraryItems([])
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('batchUpdateItineraryItems', () => {
+    const mockItem = {
+      id: 'item-1',
+      itinerary_id: 'itinerary-1',
+      day: 1,
+      time: '09:00',
+      type: 'attraction',
+      name: '更新后的景点',
+      location: { address: '测试地址', lat: 0, lng: 0 },
+      description: null,
+      cost: null,
+      duration: null,
+      tips: null,
+      image_url: null,
+      order_idx: 0,
+      created_at: '2024-01-01T00:00:00Z'
+    }
+
+    it('应该成功批量更新行程项', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockItem,
+              error: null
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      const result = await itineraryService.batchUpdateItineraryItems([
+        { id: 'item-1', data: { name: '更新后的景点' } }
+      ])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('更新后的景点')
+    })
+
+    it('应该返回更新后的行程项数组', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: mockItem,
+              error: null
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      const result = await itineraryService.batchUpdateItineraryItems([
+        { id: 'item-1', data: { name: '更新1' } },
+        { id: 'item-2', data: { name: '更新2' } }
+      ])
+
+      expect(Array.isArray(result)).toBe(true)
+    })
+
+    it('应该处理批量更新失败', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: '更新失败', code: 'DB_ERROR' }
+            })
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.batchUpdateItineraryItems([
+          { id: 'item-1', data: { name: '更新' } }
+        ])
+      ).rejects.toThrow()
+    })
+
+    it('应该正确处理空数组', async () => {
+      const result = await itineraryService.batchUpdateItineraryItems([])
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('batchDeleteItineraryItems', () => {
+    it('应该成功批量删除行程项', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.batchDeleteItineraryItems(['item-1', 'item-2'])
+      ).resolves.not.toThrow()
+    })
+
+    it('应该处理批量删除失败', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({
+          error: { message: '批量删除失败', code: 'DB_ERROR' }
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.batchDeleteItineraryItems(['item-1', 'item-2'])
+      ).rejects.toThrow('批量删除行程项失败')
+    })
+
+    it('应该正确处理空数组', async () => {
+      const mockDelete = vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({
+          error: null
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        delete: mockDelete
+      } as any)
+
+      await expect(
+        itineraryService.batchDeleteItineraryItems([])
+      ).resolves.not.toThrow()
+    })
+  })
+
+  describe('reorderItineraryItems', () => {
+    it('应该成功重排序行程项', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({
+            error: null
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.reorderItineraryItems('itinerary-1', [
+          { id: 'item-1', day: 1, order_idx: 0 },
+          { id: 'item-2', day: 1, order_idx: 1 }
+        ])
+      ).resolves.not.toThrow()
+    })
+
+    it('应该更新 day 和 order_idx', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({
+            error: null
+          })
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await itineraryService.reorderItineraryItems('itinerary-1', [
+        { id: 'item-1', day: 2, order_idx: 5 }
+      ])
+
+      expect(mockUpdate).toHaveBeenCalledWith({ day: 2, order_idx: 5 })
+    })
+
+    it('应该处理重排序异常', async () => {
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockRejectedValue(new Error('数据库异常'))
+        })
+      })
+
+      vi.mocked(supabase.from).mockReturnValue({
+        update: mockUpdate
+      } as any)
+
+      await expect(
+        itineraryService.reorderItineraryItems('itinerary-1', [
+          { id: 'item-1', day: 1, order_idx: 0 }
+        ])
+      ).rejects.toThrow('重排序行程项失败')
+    })
+
+    it('应该正确处理空数组', async () => {
+      await expect(
+        itineraryService.reorderItineraryItems('itinerary-1', [])
+      ).resolves.not.toThrow()
+    })
+  })
+
+  describe('buildDailySchedule', () => {
+    it('应该正确构建每日行程', () => {
+      const items = [
+        { id: 'item-1', day: 1, name: '景点A', time: '09:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0, itinerary_id: 'itinerary-1', created_at: '2024-01-01T00:00:00Z' } as itineraryService.ItineraryItem,
+        { id: 'item-2', day: 2, name: '景点B', time: '10:00', type: 'attraction', location: { address: '', lat: 0, lng: 0 }, order_idx: 0, itinerary_id: 'itinerary-1', created_at: '2024-01-01T00:00:00Z' } as itineraryService.ItineraryItem
+      ]
+
+      const result = itineraryService.buildDailySchedule('2024-01-01', '2024-01-02', items)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].day).toBe(1)
+      expect(result[0].items).toHaveLength(1)
+      expect(result[1].day).toBe(2)
+      expect(result[1].items).toHaveLength(1)
+    })
+
+    it('应该包含正确的日期信息', () => {
+      const result = itineraryService.buildDailySchedule('2024-01-01', '2024-01-01', [])
+
+      expect(result[0].date).toBe('2024-01-01')
+      expect(result[0].dayOfWeek).toBe('星期一')
+    })
+
+    it('应该正确处理空行程项', () => {
+      const result = itineraryService.buildDailySchedule('2024-01-01', '2024-01-03', [])
+
+      expect(result).toHaveLength(3)
+      expect(result.every(day => day.items.length === 0)).toBe(true)
+    })
+  })
+
+  describe('buildBudgetBreakdown', () => {
+    it('应该正确构建预算明细', () => {
+      const items = [
+        { id: 'item-1', type: 'transport', cost: 100 } as itineraryService.ItineraryItem,
+        { id: 'item-2', type: 'restaurant', cost: 200 } as itineraryService.ItineraryItem,
+        { id: 'item-3', type: 'attraction', cost: 150 } as itineraryService.ItineraryItem
+      ]
+
+      const result = itineraryService.buildBudgetBreakdown(items)
+
+      expect(result.transport).toBe(100)
+      expect(result.food).toBe(200)
+      expect(result.tickets).toBe(150)
+      expect(result.total).toBe(450)
+    })
+
+    it('应该正确处理空数组', () => {
+      const result = itineraryService.buildBudgetBreakdown([])
+
+      expect(result.total).toBe(0)
+    })
+
+    it('应该正确处理 null cost', () => {
+      const items = [
+        { id: 'item-1', type: 'attraction', cost: null } as itineraryService.ItineraryItem
+      ]
+
+      const result = itineraryService.buildBudgetBreakdown(items)
+
+      expect(result.total).toBe(0)
+    })
+  })
 })

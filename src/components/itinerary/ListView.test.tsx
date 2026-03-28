@@ -74,7 +74,7 @@ const mockDailySchedule: DailyScheduleBuilt[] = [
     date: '2024-03-03',
     dayOfWeek: '星期日',
     theme: '休闲时光',
-    items: [mockItems[0]]
+    items: []
   }
 ]
 
@@ -173,7 +173,7 @@ describe('ListView', () => {
 
       expect(screen.getByText('09:00')).toBeInTheDocument()
       expect(screen.getByText('景点')).toBeInTheDocument()
-      expect(screen.getByText('¥60')).toBeInTheDocument()
+      expect(screen.getByText(/¥60/)).toBeInTheDocument()
       expect(screen.getByText('参观故宫，感受明清皇家宫殿的宏伟')).toBeInTheDocument()
     })
   })
@@ -189,6 +189,71 @@ describe('ListView', () => {
       )
 
       expect(screen.getByText('暂无行程安排')).toBeInTheDocument()
+    })
+  })
+
+  describe('编辑模式测试', () => {
+    it('编辑模式下应该显示添加按钮', () => {
+      const onAddItem = vi.fn()
+      render(
+        <ListView
+          dailySchedule={mockDailySchedule}
+          expandedDays={new Set([0])}
+          onToggleDay={mockOnToggleDay}
+          isEditMode={true}
+          onAddItem={onAddItem}
+        />
+      )
+
+      expect(screen.getByText('添加行程项')).toBeInTheDocument()
+    })
+
+    it('编辑模式下不应该显示空状态提示', () => {
+      render(
+        <ListView
+          dailySchedule={mockDailySchedule}
+          expandedDays={new Set([1])}
+          onToggleDay={mockOnToggleDay}
+          isEditMode={true}
+        />
+      )
+
+      expect(screen.queryByText('暂无行程安排')).not.toBeInTheDocument()
+    })
+
+    it('点击添加按钮应该调用 onAddItem', () => {
+      const onAddItem = vi.fn()
+      render(
+        <ListView
+          dailySchedule={mockDailySchedule}
+          expandedDays={new Set([0])}
+          onToggleDay={mockOnToggleDay}
+          isEditMode={true}
+          onAddItem={onAddItem}
+        />
+      )
+
+      fireEvent.click(screen.getByText('添加行程项'))
+
+      expect(onAddItem).toHaveBeenCalledWith(1)
+    })
+
+    it('编辑模式下点击日期标题不应该触发展开/收起', () => {
+      render(
+        <ListView
+          dailySchedule={mockDailySchedule}
+          expandedDays={new Set()}
+          onToggleDay={mockOnToggleDay}
+          isEditMode={true}
+        />
+      )
+
+      const dayHeader = screen.getByText('探索之旅').closest('div')
+      if (dayHeader) {
+        fireEvent.click(dayHeader)
+      }
+
+      expect(mockOnToggleDay).not.toHaveBeenCalled()
     })
   })
 })
