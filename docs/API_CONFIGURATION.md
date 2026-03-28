@@ -400,10 +400,14 @@ asr.stopRecognition();
 3. 点击 "创建新应用"
 4. 填写应用信息：
    - **应用名称**: `AI Travel Planner`
-   - **应用类型**: `Web端(JS API)`
+   - **应用类型**: `出行` 或 `其他`
 5. 点击 "提交"
 
-### 3. 添加 Key
+### 3. 添加 Key（需要两种类型的 Key）
+
+本项目需要两种类型的高德地图 API Key：
+
+#### 3.1 Web端(JS API) Key - 用于前端地图展示
 
 1. 在应用列表中，找到刚创建的应用
 2. 点击 "添加 Key"
@@ -412,16 +416,40 @@ asr.stopRecognition();
    - **服务平台**: `Web端(JS API)`
 4. 点击 "提交"
 5. 记录以下信息：
-   - **Key**: API Key
-   - **安全密钥**: Security JS Code
+   - **Key**: API Key（用于 `VITE_AMAP_KEY`）
+   - **安全密钥**: Security JS Code（用于 `VITE_AMAP_SECURITY_JS_CODE`）
+
+#### 3.2 Web服务 Key - 用于服务端 POI 搜索
+
+1. 在同一应用下，再次点击 "添加 Key"
+2. 填写 Key 信息：
+   - **Key 名称**: `Web服务 Key`
+   - **服务平台**: `Web服务`
+3. 点击 "提交"
+4. 记录 Key 信息（用于 `AMAP_WEB_API_KEY`）
+
+**重要说明**：
+- `Web端(JS API)` Key 用于前端 JavaScript 调用，直接在浏览器中使用
+- `Web服务` Key 用于服务端 REST API 调用，如 POI 搜索、地理编码等
+- 两种 Key 不能混用，否则会返回 `USERKEY_PLAT_NOMATCH` 错误
 
 ### 4. 配置 API Key
 
 在 `.env` 文件中添加：
 
 ```env
-VITE_AMAP_KEY=your-amap-key
+# 高德地图 - Web端(JS API) - 前端地图展示
+VITE_AMAP_KEY=your-amap-web-js-key
 VITE_AMAP_SECURITY_JS_CODE=your-security-js-code
+
+# 高德地图 - Web服务 - 服务端 POI 搜索（需要配置到 Supabase Edge Functions）
+AMAP_WEB_API_KEY=your-amap-web-service-key
+```
+
+**配置 Web服务 Key 到 Supabase**：
+
+```bash
+supabase secrets set AMAP_WEB_API_KEY=your-amap-web-service-key --project-ref your-project-ref
 ```
 
 ### 5. API 使用示例
@@ -658,9 +686,12 @@ VITE_XUNFEI_APP_ID=your-xunfei-app-id
 VITE_XUNFEI_API_KEY=your-xunfei-api-key
 VITE_XUNFEI_API_SECRET=your-xunfei-api-secret
 
-# 高德地图
-VITE_AMAP_KEY=your-amap-key
+# 高德地图 - Web端(JS API) - 前端地图展示
+VITE_AMAP_KEY=your-amap-web-js-key
 VITE_AMAP_SECURITY_JS_CODE=your-amap-security-js-code
+
+# 高德地图 - Web服务 - 服务端 POI 搜索
+AMAP_WEB_API_KEY=your-amap-web-service-key
 
 # 应用配置
 VITE_APP_NAME=AI Travel Planner
@@ -687,7 +718,8 @@ const requiredEnvVars = [
   'VITE_XUNFEI_API_KEY',
   'VITE_XUNFEI_API_SECRET',
   'VITE_AMAP_KEY',
-  'VITE_AMAP_SECURITY_JS_CODE'
+  'VITE_AMAP_SECURITY_JS_CODE',
+  'AMAP_WEB_API_KEY'
 ];
 
 const missingVars = requiredEnvVars.filter(

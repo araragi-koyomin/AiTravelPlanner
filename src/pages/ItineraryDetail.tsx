@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,7 +12,7 @@ import {
 } from '@/services/itinerary'
 import { useAuthStore } from '@/stores/authStore'
 import { ItineraryDetailSkeleton } from '@/components/ui/Skeleton'
-import { MapPin, Calendar, Users, DollarSign, Clock, UserCircle, Home, Gauge } from 'lucide-react'
+import { MapPin, Calendar, Users, DollarSign, Clock, UserCircle, Home, Gauge, Map } from 'lucide-react'
 import { ListView } from '@/components/itinerary/ListView'
 import { TimelineView } from '@/components/itinerary/TimelineView'
 import {
@@ -24,6 +24,8 @@ import {
   type PaceType
 } from '@/types/itinerary'
 
+const ItineraryMapView = lazy(() => import('@/components/itinerary/ItineraryMapView').then(m => ({ default: m.ItineraryMapView })))
+
 export function ItineraryDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -32,8 +34,10 @@ export function ItineraryDetail() {
   const [items, setItems] = useState<ItineraryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'timeline' | 'map'>('list')
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set())
+  const [mapInView, setMapInView] = useState(false)
+  const mapContainerRef = useRef<HTMLDivElement>(null)
 
   const loadItinerary = useCallback(async () => {
     if (!id) {
@@ -74,6 +78,28 @@ export function ItineraryDetail() {
   useEffect(() => {
     loadItinerary()
   }, [loadItinerary])
+
+  useEffect(() => {
+    if (viewMode !== 'map' || !mapContainerRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setMapInView(true)
+            observer.disconnect()
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(mapContainerRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [viewMode])
 
   const toggleDay = (dayIndex: number) => {
     setExpandedDays(prev => {
@@ -255,14 +281,23 @@ export function ItineraryDetail() {
           >
             时间轴视图
           </Button>
+          <Button
+            variant={viewMode === 'map' ? 'primary' : 'outline'}
+            onClick={() => setViewMode('map')}
+          >
+            <Map className="w-4 h-4 mr-1" />
+            地图视图
+          </Button>
         </div>
       </div>
 
-      <div className="mb-4">
-        <Button variant="ghost" onClick={toggleAllDays}>
-          {expandedDays.size === dailySchedule.length ? '折叠全部' : '展开全部'}
-        </Button>
-      </div>
+      {viewMode !== 'map' && (
+        <div className="mb-4">
+          <Button variant="ghost" onClick={toggleAllDays}>
+            {expandedDays.size === dailySchedule.length ? '折叠全部' : '展开全部'}
+          </Button>
+        </div>
+      )}
 
       {viewMode === 'list' ? (
         <ListView
@@ -270,12 +305,27 @@ export function ItineraryDetail() {
           expandedDays={expandedDays}
           onToggleDay={toggleDay}
         />
-      ) : (
+      ) : viewMode === 'timeline' ? (
         <TimelineView
           dailySchedule={dailySchedule}
           expandedDays={expandedDays}
           onToggleDay={toggleDay}
         />
+      ) : (
+        <div ref={mapContainerRef}>
+          {mapInView ? (
+            <Suspense fallback={<div className="h-[500px] flex items-center justify-center bg-gray-100 rounded-lg"><ItineraryDetailSkeleton /></div>}>
+              <ItineraryMapView items={items} />
+            </Suspense>
+          ) : (
+            <div className="h-[500px] flex items-center justify-center bg-gray-100 rounded-lg">
+              <div className="text-center">
+                <Map className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">滚动到此处加载地图</p>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <Card className="mt-8">
