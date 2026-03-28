@@ -54,7 +54,7 @@ describe('useAMap', () => {
 
   describe('initialization', () => {
     it('should initialize map successfully', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -128,7 +128,7 @@ describe('useAMap', () => {
 
   describe('map operations', () => {
     it('should set center correctly', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -149,7 +149,7 @@ describe('useAMap', () => {
     })
 
     it('should set zoom correctly', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -189,7 +189,7 @@ describe('useAMap', () => {
 
   describe('geolocation', () => {
     it('should get current position successfully', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const mockPosition = { lng: 116.397428, lat: 39.90923 }
       mockGeolocation.getCurrentPosition.mockImplementation((callback: any) => {
@@ -217,7 +217,7 @@ describe('useAMap', () => {
     })
 
     it('should handle geolocation error', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       mockGeolocation.getCurrentPosition.mockImplementation((callback: any) => {
         callback('error', {})
@@ -254,7 +254,7 @@ describe('useAMap', () => {
 
   describe('cleanup', () => {
     it('should destroy map on unmount', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result, unmount } = renderHook(() =>
         useAMap({
@@ -273,7 +273,7 @@ describe('useAMap', () => {
     })
 
     it('should manually destroy map', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -297,7 +297,7 @@ describe('useAMap', () => {
 
   describe('manual initialization', () => {
     it('should initialize map manually', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -316,7 +316,7 @@ describe('useAMap', () => {
     })
 
     it('should not initialize twice', async () => {
-      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({

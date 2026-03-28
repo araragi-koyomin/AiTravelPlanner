@@ -31,6 +31,18 @@ const createMockItem = (overrides: Partial<ItineraryItem> = {}): ItineraryItem =
   ...overrides
 })
 
+const createMockNewItem = () => ({
+  name: '新景点',
+  type: 'attraction' as const,
+  time: '09:00',
+  location: { address: '新地址', lat: 0, lng: 0 },
+  description: null,
+  cost: null,
+  duration: null,
+  tips: null,
+  image_url: null
+})
+
 describe('itineraryEditStore', () => {
   let mockHistoryManager: {
     push: ReturnType<typeof vi.fn>
@@ -47,10 +59,10 @@ describe('itineraryEditStore', () => {
       push: vi.fn(),
       undo: vi.fn(),
       redo: vi.fn(),
-      canUndo: vi.fn(() => false),
-      canRedo: vi.fn(() => false),
+      canUndo: vi.fn().mockReturnValue(false),
+      canRedo: vi.fn().mockReturnValue(false),
       clear: vi.fn(),
-      getHistory: vi.fn(() => [])
+      getHistory: vi.fn().mockReturnValue([])
     }
 
     vi.mocked(createHistoryManager).mockReturnValue(mockHistoryManager as any)
@@ -379,12 +391,7 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该正确添加新行程项', () => {
-      const newId = useItineraryEditStore.getState().addItem(1, {
-        name: '新景点',
-        time: '10:00',
-        type: 'restaurant',
-        location: { address: '新地址', lat: 1, lng: 1 }
-      })
+      const newId = useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       expect(state.items).toHaveLength(2)
@@ -392,13 +399,13 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该生成临时 ID', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       expect(generateItemId).toHaveBeenCalled()
     })
 
     it('应该设置 isNew 为 true', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)
@@ -406,7 +413,7 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该设置 isDirty 为 true', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)
@@ -414,7 +421,7 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该自动计算 order_idx', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)
@@ -422,7 +429,7 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该设置 isEditing 为 true', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)
@@ -430,19 +437,19 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该设置 editingItemId', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       expect(useItineraryEditStore.getState().editingItemId).toBe('temp_1234567890_abc')
     })
 
     it('应该设置 hasUnsavedChanges 为 true', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       expect(useItineraryEditStore.getState().hasUnsavedChanges).toBe(true)
     })
 
     it('应该记录历史', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       expect(mockHistoryManager.push).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -456,14 +463,14 @@ describe('itineraryEditStore', () => {
       useItineraryEditStore.setState({ itineraryId: null })
 
       expect(() => {
-        useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+        useItineraryEditStore.getState().addItem(1, createMockNewItem())
       }).toThrow('No itinerary ID set')
     })
 
     it('应该正确处理空日期的 order_idx', () => {
       useItineraryEditStore.setState({ items: [] })
 
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)
@@ -471,7 +478,7 @@ describe('itineraryEditStore', () => {
     })
 
     it('应该使用默认值填充缺失字段', () => {
-      useItineraryEditStore.getState().addItem(1, { name: '新景点' })
+      useItineraryEditStore.getState().addItem(1, createMockNewItem())
 
       const state = useItineraryEditStore.getState()
       const newItem = state.items.find(i => i.isNew)

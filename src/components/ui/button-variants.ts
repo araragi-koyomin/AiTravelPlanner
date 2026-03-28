@@ -9,6 +9,8 @@ export const buttonVariants = cva(
         secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
         outline: 'border border-gray-300 bg-transparent hover:bg-gray-100',
         ghost: 'hover:bg-gray-100',
+        destructive: 'bg-red-600 text-white hover:bg-red-700',
+        link: 'text-primary-600 underline-offset-4 hover:underline',
       },
       size: {
         sm: 'h-8 px-3 text-xs',
