@@ -1,3 +1,5 @@
+import { getAmapCredentials, type AmapCredentials } from '@/services/settings'
+
 export const apiConfig = {
   zhipu: {
     apiKey: import.meta.env.VITE_ZHIPU_API_KEY,
@@ -14,3 +16,17 @@ export const apiConfig = {
     securityJsCode: import.meta.env.VITE_AMAP_SECURITY_JS_CODE,
   },
 } as const
+
+export async function getAmapConfigWithFallback(userId?: string): Promise<AmapCredentials> {
+  if (userId) {
+    const userCredentials = await getAmapCredentials(userId)
+    if (userCredentials) {
+      return userCredentials
+    }
+  }
+
+  return {
+    key: apiConfig.amap.key || '',
+    securityJsCode: apiConfig.amap.securityJsCode
+  }
+}

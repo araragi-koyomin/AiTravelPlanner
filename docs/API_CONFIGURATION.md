@@ -915,6 +915,82 @@ Error: AMap is not defined
 
 ---
 
+## 用户 API Key 集成
+
+### 概述
+
+本项目支持两种 API Key 配置方式：
+
+1. **环境变量配置**：适用于开发环境或私有部署
+2. **用户自行配置**：适用于公开部署，用户在设置页面配置自己的 API Key
+
+### 配置方式对比
+
+| 配置方式     | 适用场景     | 优点               | 缺点               |
+| ------------ | ------------ | ------------------ | ------------------ |
+| 环境变量     | 开发/私有部署 | 配置简单，全局生效 | 不适合公开部署     |
+| 用户自行配置 | 公开部署     | 安全，用户独立管理 | 需要用户自行申请   |
+
+### 用户配置流程
+
+#### 1. 申请 API Key
+
+用户需要在各服务提供商处申请 API Key：
+
+- **智谱AI**: https://open.bigmodel.cn/
+- **科大讯飞**: https://www.xfyun.cn/
+- **高德地图**: https://lbs.amap.com/
+
+#### 2. 在设置页面配置
+
+用户登录后，进入「设置」页面，在「API Key 管理」区域填写各自的 API Key：
+
+- **智谱AI**: API Key
+- **科大讯飞**: APP ID + API Key + API Secret
+- **高德地图**: API Key + 安全密钥（可选）
+
+#### 3. 凭证存储
+
+用户提供的 API Key 会使用 AES 加密后存储在 `user_settings` 表中，确保安全性。
+
+### 开发环境配置
+
+开发环境可以同时使用两种方式：
+
+1. 在 `.env` 文件中配置默认 API Key（用于开发测试）
+2. 在设置页面配置用户 API Key（会覆盖默认配置）
+
+系统会按以下优先级使用 API Key：
+
+1. 用户配置的 API Key（如果存在）
+2. 环境变量中的 API Key（作为回退）
+
+### 代码示例
+
+```typescript
+// 获取 API Key（带回退）
+import { getApiKeyWithFallback } from '@/services/settings';
+
+// 智谱AI
+const zhipuKey = await getApiKeyWithFallback(userId, 'zhipu');
+
+// 科大讯飞（需要三个凭证）
+const xunfeiCredentials = await getXunfeiCredentials(userId);
+
+// 高德地图
+const amapCredentials = await getAmapCredentials(userId);
+```
+
+### 公开部署建议
+
+如果要将应用部署到公开域名（如 GitHub Pages），**必须**使用用户 API Key 集成方式：
+
+1. 不要在 `.env` 中配置真实的 API Key
+2. 用户需要自行申请并配置 API Key
+3. 每个用户使用自己的 API 配额，互不影响
+
+---
+
 ## 参考资料
 
 - [智谱AI 官方文档](https://open.bigmodel.cn/dev/api)
@@ -924,6 +1000,6 @@ Error: AMap is not defined
 
 ---
 
-**文档版本**：v1.0
-**最后更新**：2026-03-12
+**文档版本**：v1.1
+**最后更新**：2026-03-30
 **维护者**：项目开发者

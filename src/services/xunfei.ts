@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js'
 import type { XunfeiConfig, XunfeiFrame, XunfeiResponse, VoiceRecognitionResult } from '../types/voice'
+import { getXunfeiCredentials } from './settings'
 
 const XUNFEI_HOST = 'iat-api.xfyun.cn'
 const XUNFEI_PATH = '/v2/iat'
@@ -278,7 +279,23 @@ export function getXunfeiConfig(): XunfeiConfig {
   return { appId, apiKey, apiSecret }
 }
 
+export async function getXunfeiConfigWithFallback(userId?: string): Promise<XunfeiConfig> {
+  if (userId) {
+    const userCredentials = await getXunfeiCredentials(userId)
+    if (userCredentials) {
+      return userCredentials
+    }
+  }
+
+  return getXunfeiConfig()
+}
+
 export function createXunfeiService(): XunfeiVoiceService {
   const config = getXunfeiConfig()
+  return new XunfeiVoiceService(config)
+}
+
+export async function createXunfeiServiceWithFallback(userId?: string): Promise<XunfeiVoiceService> {
+  const config = await getXunfeiConfigWithFallback(userId)
   return new XunfeiVoiceService(config)
 }

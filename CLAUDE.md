@@ -108,6 +108,8 @@ AiTravelPlanner/
 | `test_report/Task2.8-语音识别功能验收报告.md`     | 语音识别功能验收报告      |
 | `test_report/Task2.9-费用预算功能测试报告.md`     | 费用预算功能测试报告      |
 | `test_report/Task2.9-费用预算功能验收报告.md`     | 费用预算功能验收报告      |
+| `test_report/Task2.10-费用记录功能测试报告.md`    | 费用记录功能测试报告      |
+| `test_report/Task2.10-费用记录功能验收报告.md`    | 费用记录功能验收报告      |
 
 ### 文档模板
 

@@ -403,19 +403,21 @@
 
 **任务清单：**
 
-- [ ] 创建费用表单组件（ExpenseForm.tsx）
-- [ ] 实现手动添加费用
-- [ ] 实现语音记录费用
-- [ ] 实现费用分类选择
-- [ ] 实现费用列表展示
-- [ ] 实现费用编辑功能
-- [ ] 实现费用删除功能
-- [ ] 添加费用统计汇总
+- [x] 创建费用表单组件（内联于 ExpenseManager.tsx）
+- [x] 实现手动添加费用
+- [x] 实现语音记录费用
+- [x] 实现费用分类选择
+- [x] 实现费用列表展示
+- [x] 实现费用编辑功能
+- [x] 实现费用删除功能
+- [x] 添加费用统计汇总
 
 **交付物：**
 
-- 费用记录功能
-- 费用列表和统计
+- ✅ 费用记录功能（ExpenseManager.tsx）
+- ✅ 费用列表和统计
+- ✅ 服务层完整实现（expense.ts）
+- ✅ 集成测试（expenseManager.integration.test.tsx、voiceExpense.integration.test.tsx）
 
 ***
 
@@ -425,21 +427,29 @@
 
 **任务清单：**
 
-- [ ] 创建设置页面（Settings.tsx）
-- [ ] 实现 API Key 输入
-  - [ ] 智谱AI API Key
-  - [ ] 科大讯飞 API Key
-  - [ ] 高德地图 API Key
-- [ ] 实现 API Key 加密存储
-- [ ] 实现主题切换（浅色/深色）
-- [ ] 实现语言设置（中文/英文）
-- [ ] 实现通知设置
-- [ ] 实现账户设置（修改密码、个人信息）
+- [x] 创建设置页面（Settings.tsx）
+- [x] 实现 API Key 输入
+  - [x] 智谱AI API Key（单字段）
+  - [x] 科大讯飞凭证（APP ID + API Key + API Secret 三字段）
+  - [x] 高德地图凭证（API Key + SecurityJsCode 双字段）
+- [x] 实现 API Key 加密存储（AES-256）
+- [x] 实现主题设置保存（浅色/深色，保存到数据库）
+- [x] 实现语言设置保存（中文/英文，保存到数据库）
+- [x] 实现通知设置保存（开关状态，保存到数据库）
+- [x] 实现账户设置（修改密码、退出登录）
+
+**待完善功能（后续开发）：**
+
+- [ ] 主题切换实际效果（Tailwind dark mode、CSS 变量）
+- [ ] 国际化（i18n）功能
+- [ ] 推送通知功能（可选）
 
 **交付物：**
 
-- 设置页面
-- API Key 管理功能
+- ✅ 设置页面
+- ✅ API Key 管理功能（支持多凭证类型）
+- ✅ 主题/语言/通知设置（保存到数据库）
+- ✅ 账户设置（修改密码、退出登录）
 
 #### 3.6.2 行程导出功能（2天）
 
@@ -531,6 +541,53 @@
 
 ### 第8周：部署与文档
 
+#### 3.8.0 Edge Function 用户 API Key 支持（1天）
+
+**背景说明：**
+
+当前 Edge Functions（generate-itinerary、optimize-itinerary 等）直接使用 Supabase 环境变量中的 API Key，未使用用户在设置页面配置的 API Key。公开部署时需要修改为支持用户 API Key。
+
+**任务清单：**
+
+- [ ] 修改 `generate-itinerary` Edge Function
+  - [ ] 添加从 `user_settings` 表读取用户 API Key 的逻辑
+  - [ ] 实现用户 API Key 解密（使用与前端相同的加密密钥）
+  - [ ] 实现回退机制：用户 Key → 环境变量 Key
+- [ ] 修改 `optimize-itinerary` Edge Function（同上）
+- [ ] 修改 `get-recommendations` Edge Function（同上）
+- [ ] 修改 `analyze-budget` Edge Function（同上）
+- [ ] 测试用户 API Key 调用路径
+- [ ] 测试回退到环境变量的路径
+- [ ] 更新相关文档
+
+**技术实现要点：**
+
+```typescript
+// Edge Function 中获取 API Key 的逻辑
+async function getApiKey(userId: string, keyType: string): Promise<string | undefined> {
+  const supabase = createClient(...)
+  
+  // 1. 尝试获取用户配置的 API Key
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select(`${keyType}_api_key`)
+    .eq('user_id', userId)
+    .single()
+  
+  if (settings?.[`${keyType}_api_key`]) {
+    return decryptApiKey(settings[`${keyType}_api_key`])
+  }
+  
+  // 2. 回退到环境变量
+  return Deno.env.get(`${keyType.toUpperCase()}_API_KEY`)
+}
+```
+
+**交付物：**
+
+- ✅ 支持用户 API Key 的 Edge Functions
+- ✅ 测试通过的 API Key 调用路径
+
 #### 3.8.1 Docker 部署配置（2天）
 
 **任务清单：**
@@ -572,7 +629,7 @@
   - [ ] 技术栈
   - [ ] 安装和运行说明
   - [ ] Docker 部署说明
-  - [ ] API Key 配置说明
+  - [x] API Key 配置说明（用户自行配置，支持多凭证类型）
   - [ ] 项目结构说明
 - [ ] 编写 API 文档
 - [ ] 编写部署文档
@@ -612,7 +669,7 @@
 | M1: 项目初始化完成 | 第1周结束 | 项目脚手架、基础组件、路由配置     | ✅ 已完成                                                           |
 | M2: 认证系统完成   | 第2周结束 | 用户注册登录、数据库设计、API 封装 | ✅ 已完成                                                           |
 | M3: 核心功能完成   | 第4周结束 | 行程生成、地图展示、行程管理       | ✅ 已完成                                                           |
-| M4: 增强功能完成   | 第6周结束 | 语音识别、费用管理、云端同步       | ✅ 已完成（语音识别、费用预算已完成）                               |
+| M4: 增强功能完成   | 第6周结束 | 语音识别、费用管理、云端同步       | ✅ 已完成（语音识别、费用预算、费用记录已完成）                     |
 | M5: 测试完成       | 第7周结束 | Bug 修复、单元测试、功能测试       | ⬜ 待开始                                                           |
 | M6: 项目交付       | 第8周结束 | Docker 镜像、文档、GitHub 仓库     | ⬜ 待开始                                                           |
 

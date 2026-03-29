@@ -10,7 +10,10 @@ export type ApiKeyType = 'zhipu' | 'xunfei' | 'amap'
 const DEFAULT_SETTINGS: Omit<UserSettingsInsert, 'user_id'> = {
   zhipu_api_key: null,
   xunfei_api_key: null,
+  xunfei_app_id: null,
+  xunfei_api_secret: null,
   amap_api_key: null,
+  amap_security_js_code: null,
   theme: 'light',
   language: 'zh',
   notifications: true
@@ -140,6 +143,52 @@ export async function updateApiKey(
   }
 }
 
+export interface XunfeiCredentials {
+  appId: string
+  apiKey: string
+  apiSecret: string
+}
+
+export interface AmapCredentials {
+  key: string
+  securityJsCode?: string
+}
+
+export async function updateXunfeiCredentials(
+  userId: string,
+  credentials: XunfeiCredentials
+): Promise<UserSettings> {
+  try {
+    const updateData: UserSettingsUpdate = {
+      xunfei_app_id: credentials.appId ? encryptApiKey(credentials.appId) : null,
+      xunfei_api_key: credentials.apiKey ? encryptApiKey(credentials.apiKey) : null,
+      xunfei_api_secret: credentials.apiSecret ? encryptApiKey(credentials.apiSecret) : null
+    }
+
+    return await updateUserSettings(userId, updateData)
+  } catch (error) {
+    console.error('更新科大讯飞凭证失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('更新科大讯飞凭证失败')
+  }
+}
+
+export async function updateAmapCredentials(
+  userId: string,
+  credentials: AmapCredentials
+): Promise<UserSettings> {
+  try {
+    const updateData: UserSettingsUpdate = {
+      amap_api_key: credentials.key ? encryptApiKey(credentials.key) : null,
+      amap_security_js_code: credentials.securityJsCode ? encryptApiKey(credentials.securityJsCode) : null
+    }
+
+    return await updateUserSettings(userId, updateData)
+  } catch (error) {
+    console.error('更新高德地图凭证失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('更新高德地图凭证失败')
+  }
+}
+
 export async function getApiKey(
   userId: string,
   keyType: ApiKeyType
@@ -174,6 +223,55 @@ export async function getApiKey(
   }
 }
 
+export async function getXunfeiCredentials(
+  userId: string
+): Promise<XunfeiCredentials | null> {
+  try {
+    const settings = await getUserSettings(userId)
+
+    if (!settings) {
+      return null
+    }
+
+    const appId = decryptApiKey(settings.xunfei_app_id)
+    const apiKey = decryptApiKey(settings.xunfei_api_key)
+    const apiSecret = decryptApiKey(settings.xunfei_api_secret)
+
+    if (!appId || !apiKey || !apiSecret) {
+      return null
+    }
+
+    return { appId, apiKey, apiSecret }
+  } catch (error) {
+    console.error('获取科大讯飞凭证失败:', error)
+    return null
+  }
+}
+
+export async function getAmapCredentials(
+  userId: string
+): Promise<AmapCredentials | null> {
+  try {
+    const settings = await getUserSettings(userId)
+
+    if (!settings) {
+      return null
+    }
+
+    const key = decryptApiKey(settings.amap_api_key)
+    const securityJsCode = decryptApiKey(settings.amap_security_js_code)
+
+    if (!key) {
+      return null
+    }
+
+    return { key, securityJsCode: securityJsCode || undefined }
+  } catch (error) {
+    console.error('获取高德地图凭证失败:', error)
+    return null
+  }
+}
+
 export async function deleteApiKey(
   userId: string,
   keyType: ApiKeyType
@@ -187,9 +285,12 @@ export async function deleteApiKey(
         break
       case 'xunfei':
         updateData.xunfei_api_key = null
+        updateData.xunfei_app_id = null
+        updateData.xunfei_api_secret = null
         break
       case 'amap':
         updateData.amap_api_key = null
+        updateData.amap_security_js_code = null
         break
       default:
         throw new SupabaseErrorClass('无效的 API Key 类型')

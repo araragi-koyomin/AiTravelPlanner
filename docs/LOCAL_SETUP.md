@@ -240,6 +240,39 @@ VITE_APP_VERSION=1.0.0
 - 其他 API Key 可以在后续开发中逐步添加
 - 永远不要提交 `.env` 文件到 Git
 
+#### API Key 配置说明
+
+本项目支持两种 API Key 配置方式：
+
+| 配置方式       | 适用场景           | 说明                                       |
+| -------------- | ------------------ | ------------------------------------------ |
+| 环境变量配置   | 本地开发、私有部署 | 在 `.env` 文件中配置，全局生效             |
+| 用户自行配置   | 公开部署           | 用户在「设置」页面配置自己的 API Key       |
+
+**开发环境推荐**：
+
+在 `.env` 文件中配置 API Key，方便开发测试：
+
+```env
+# 智谱AI（可选）
+VITE_ZHIPU_API_KEY=your-zhipu-api-key
+
+# 科大讯飞（可选）
+VITE_XUNFEI_APP_ID=your-app-id
+VITE_XUNFEI_API_KEY=your-api-key
+VITE_XUNFEI_API_SECRET=your-api-secret
+
+# 高德地图（可选）
+VITE_AMAP_KEY=your-amap-key
+VITE_AMAP_SECURITY_JS_CODE=your-security-js-code
+```
+
+**公开部署**：
+
+如果要将应用部署到公开域名（如 GitHub Pages），**不要**在 `.env` 中配置真实的 API Key。用户需要在「设置」页面自行配置。
+
+详细说明请参考 [API_CONFIGURATION.md](./API_CONFIGURATION.md#用户-api-key-集成)。
+
 ### 4. 验证项目结构
 
 ```bash
@@ -702,6 +735,6 @@ pnpm audit
 
 ---
 
-**文档版本**：v1.0
-**最后更新**：2026-03-12
+**文档版本**：v1.1
+**最后更新**：2026-03-30
 **维护者**：项目开发者

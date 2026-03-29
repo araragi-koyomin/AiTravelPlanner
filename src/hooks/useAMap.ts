@@ -8,6 +8,8 @@ import type {
   GeolocationError,
   AMapGeolocationResult
 } from '@/types/map'
+import { getAmapConfigWithFallback } from '@/config/api'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface UseAMapOptions {
   containerId: string
@@ -59,6 +61,8 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
     autoLoad = true
   } = options
 
+  const userId = useAuthStore((state) => state.user?.id)
+
   const [map, setMap] = useState<AMapInstance | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -78,7 +82,8 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
       return
     }
 
-    const amapKey = configRef.current.key || defaultConfig.key
+    const amapConfig = await getAmapConfigWithFallback(userId)
+    const amapKey = configRef.current.key || amapConfig.key
     if (!amapKey) {
       setError(new Error('高德地图 API Key 未配置'))
       return
@@ -88,7 +93,7 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
     setLoading(true)
     setError(null)
 
-    const securityJsCode = import.meta.env.VITE_AMAP_SECURITY_JS_CODE || ''
+    const securityJsCode = amapConfig.securityJsCode || ''
     if (securityJsCode) {
       window._AMapSecurityConfig = {
         securityJsCode
@@ -195,7 +200,7 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
     return () => {
       destroyMap()
     }
-  }, [autoLoad, initMap, destroyMap])
+  }, [autoLoad, initMap, destroyMap, userId])
 
   return {
     map,

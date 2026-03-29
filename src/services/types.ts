@@ -81,7 +81,10 @@ export interface UserSettings {
   user_id: string
   zhipu_api_key: string | null
   xunfei_api_key: string | null
+  xunfei_app_id: string | null
+  xunfei_api_secret: string | null
   amap_api_key: string | null
+  amap_security_js_code: string | null
   theme: 'light' | 'dark'
   language: 'zh' | 'en'
   notifications: boolean

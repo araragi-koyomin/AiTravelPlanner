@@ -33,12 +33,20 @@ export function Header() {
               首页
             </Link>
             {isAuthenticated && (
-              <Link
-                to="/itineraries"
-                className="text-sm font-medium text-gray-700 transition-colors hover:text-primary-600"
-              >
-                行程
-              </Link>
+              <>
+                <Link
+                  to="/itineraries"
+                  className="text-sm font-medium text-gray-700 transition-colors hover:text-primary-600"
+                >
+                  行程
+                </Link>
+                <Link
+                  to="/settings"
+                  className="text-sm font-medium text-gray-700 transition-colors hover:text-primary-600"
+                >
+                  设置
+                </Link>
+              </>
             )}
             <Link
               to="/about"

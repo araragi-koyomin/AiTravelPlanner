@@ -91,20 +91,23 @@
                           │ - created_at    │
                           └─────────────────┘
 
-┌─────────────────┐
-│  user_settings  │
-│                 │
-│ - id (PK)       │
-│ - user_id (FK)  │
-│ - zhipu_api_key │
-│ - xunfei_api_key│
-│ - amap_api_key  │
-│ - theme         │
-│ - language      │
-│ - notifications │
-│ - created_at    │
-│ - updated_at    │
-└─────────────────┘
+┌──────────────────────┐
+│    user_settings     │
+│                      │
+│ - id (PK)            │
+│ - user_id (FK)       │
+│ - zhipu_api_key      │
+│ - xunfei_app_id      │
+│ - xunfei_api_key     │
+│ - xunfei_api_secret  │
+│ - amap_api_key       │
+│ - amap_security_js_code│
+│ - theme              │
+│ - language           │
+│ - notifications      │
+│ - created_at         │
+│ - updated_at         │
+└──────────────────────┘
 ```
 
 ### 关系说明
@@ -489,22 +492,25 @@ CREATE INDEX idx_expenses_itinerary_date ON expenses(itinerary_id, expense_date)
 
 ### 5. user_settings (用户设置表)
 
-存储用户的个性化设置。
+存储用户的个性化设置和 API Key。
 
 #### 表结构
 
-| 字段名           | 类型        | 约束                        | 说明             |
-| ---------------- | ----------- | --------------------------- | ---------------- |
-| `id`             | UUID        | PRIMARY KEY                 | 设置 ID          |
-| `user_id`        | UUID        | FOREIGN KEY UNIQUE NOT NULL | 用户 ID          |
-| `zhipu_api_key`  | TEXT        | NULL                        | 智谱AI API Key   |
-| `xunfei_api_key` | TEXT        | NULL                        | 科大讯飞 API Key |
-| `amap_api_key`   | TEXT        | NULL                        | 高德地图 API Key |
-| `theme`          | VARCHAR(10) | CHECK DEFAULT 'light'       | 主题             |
-| `language`       | VARCHAR(5)  | CHECK DEFAULT 'zh'          | 语言             |
-| `notifications`  | BOOLEAN     | DEFAULT TRUE                | 通知开关         |
-| `created_at`     | TIMESTAMPTZ | DEFAULT NOW()               | 创建时间         |
-| `updated_at`     | TIMESTAMPTZ | DEFAULT NOW()               | 更新时间         |
+| 字段名                | 类型        | 约束                        | 说明                    |
+| --------------------- | ----------- | --------------------------- | ----------------------- |
+| `id`                  | UUID        | PRIMARY KEY                 | 设置 ID                 |
+| `user_id`             | UUID        | FOREIGN KEY UNIQUE NOT NULL | 用户 ID                 |
+| `zhipu_api_key`       | TEXT        | NULL                        | 智谱AI API Key（加密）  |
+| `xunfei_app_id`       | TEXT        | NULL                        | 科大讯飞 APP ID（加密） |
+| `xunfei_api_key`      | TEXT        | NULL                        | 科大讯飞 API Key（加密）|
+| `xunfei_api_secret`   | TEXT        | NULL                        | 科大讯飞 API Secret（加密）|
+| `amap_api_key`        | TEXT        | NULL                        | 高德地图 API Key（加密）|
+| `amap_security_js_code`| TEXT       | NULL                        | 高德地图安全密钥（加密）|
+| `theme`               | VARCHAR(10) | CHECK DEFAULT 'light'       | 主题                    |
+| `language`            | VARCHAR(5)  | CHECK DEFAULT 'zh'          | 语言                    |
+| `notifications`       | BOOLEAN     | DEFAULT TRUE                | 通知开关                |
+| `created_at`          | TIMESTAMPTZ | DEFAULT NOW()               | 创建时间                |
+| `updated_at`          | TIMESTAMPTZ | DEFAULT NOW()               | 更新时间                |
 
 #### SQL 定义
 
@@ -513,8 +519,11 @@ CREATE TABLE user_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   zhipu_api_key TEXT,
+  xunfei_app_id TEXT,
   xunfei_api_key TEXT,
+  xunfei_api_secret TEXT,
   amap_api_key TEXT,
+  amap_security_js_code TEXT,
   theme VARCHAR(10) DEFAULT 'light' CHECK (theme IN ('light', 'dark')),
   language VARCHAR(5) DEFAULT 'zh' CHECK (language IN ('zh', 'en')),
   notifications BOOLEAN DEFAULT TRUE,
@@ -528,8 +537,11 @@ CREATE TABLE user_settings (
 - **id**: 设置记录唯一标识
 - **user_id**: 关联用户（auth.users），唯一约束，级联删除
 - **zhipu_api_key**: 智谱AI API Key（加密存储）
+- **xunfei_app_id**: 科大讯飞 APP ID（加密存储）
 - **xunfei_api_key**: 科大讯飞 API Key（加密存储）
+- **xunfei_api_secret**: 科大讯飞 API Secret（加密存储）
 - **amap_api_key**: 高德地图 API Key（加密存储）
+- **amap_security_js_code**: 高德地图安全密钥（加密存储）
 - **theme**: 主题，枚举值：
   - `light`: 浅色主题
   - `dark`: 深色主题
@@ -539,6 +551,10 @@ CREATE TABLE user_settings (
 - **notifications**: 是否启用通知
 - **created_at**: 创建时间
 - **updated_at**: 更新时间
+
+#### 安全说明
+
+所有 API Key 字段均使用 AES 加密存储，加密密钥通过环境变量 `VITE_ENCRYPTION_KEY` 配置。用户提供的 API Key 仅用于当前用户的请求，不会暴露给其他用户。
 
 #### 索引
 
@@ -926,5 +942,6 @@ supabase db restore --backup-id <backup-id>
 
 | 版本   | 日期       | 变更内容                                      |
 | ------ | ---------- | --------------------------------------------- |
+| 2.1.0  | 2026-03-30 | user_settings 表新增 xunfei_app_id、xunfei_api_secret、amap_security_js_code 字段 |
 | 2.0.0  | 2026-03-19 | 重大重构：users→user_profiles，itinerary_items 结构重构 |
 | 1.0.0  | 2026-03-15 | 初始版本                                      |
