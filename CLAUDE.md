@@ -106,6 +106,8 @@ AiTravelPlanner/
 | `test_report/Task2.7-行程列表管理验收报告.md`     | 行程列表管理验收报告      |
 | `test_report/Task2.8-语音识别功能测试报告.md`     | 语音识别功能测试报告      |
 | `test_report/Task2.8-语音识别功能验收报告.md`     | 语音识别功能验收报告      |
+| `test_report/Task2.9-费用预算功能测试报告.md`     | 费用预算功能测试报告      |
+| `test_report/Task2.9-费用预算功能验收报告.md`     | 费用预算功能验收报告      |
 
 ### 文档模板
 
@@ -265,7 +267,7 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-03-29
+**最后更新**: 2026-03-30
 
 ## 数据库重构说明
 

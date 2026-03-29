@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Mic, Plus, Trash2, Edit2, Save, X } from 'lucide-react'
+import { Mic, Plus, Trash2, Edit2, Save, X, ArrowLeft, BarChart3, List } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import {
@@ -11,6 +11,13 @@ import {
   CardTitle
 } from '@/components/ui/Card'
 import { VoiceInput } from '@/components/voice'
+import {
+  BudgetOverview,
+  ExpensePieChart,
+  ExpenseBarChart,
+  OverBudgetAlertList,
+  ExpenseAnalysis
+} from '@/components/expense'
 import { useAuthStore } from '@/stores/authStore'
 import {
   getExpenses,
@@ -18,23 +25,14 @@ import {
   updateExpense,
   deleteExpense,
   getExpenseStats,
-  getExpenseSummary,
   type Expense,
-  type ExpenseStats,
-  type ExpenseSummary
+  type ExpenseStats
 } from '@/services/expense'
+import { getItineraryById } from '@/services/itinerary'
 import { parseVoiceToExpense } from '@/utils/voiceParser'
+import { calculateBudgetStatus, calculateCategoryExpenses, generateRecommendations } from '@/utils/expenseUtils'
 import type { ExpenseCategory, PaymentMethod } from '@/services/supabase'
-
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  transport: '交通',
-  accommodation: '住宿',
-  food: '餐饮',
-  ticket: '门票',
-  shopping: '购物',
-  entertainment: '娱乐',
-  other: '其他'
-}
+import { CATEGORY_LABELS, CATEGORY_COLORS, type BudgetStatus, type CategoryExpense } from '@/types/expense'
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: '现金',
@@ -63,14 +61,16 @@ const DEFAULT_EXPENSE_FORM: ExpenseFormData = {
   notes: ''
 }
 
+type ViewMode = 'list' | 'chart'
+
 export function ExpenseManager() {
   const { itineraryId } = useParams<{ itineraryId: string }>()
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
 
+  const [budget, setBudget] = useState<number>(0)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [stats, setStats] = useState<ExpenseStats | null>(null)
-  const [summary, setSummary] = useState<ExpenseSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -78,6 +78,9 @@ export function ExpenseManager() {
   const [showVoiceInput, setShowVoiceInput] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<ExpenseFormData>(DEFAULT_EXPENSE_FORM)
+  const [viewMode, setViewMode] = useState<ViewMode>('chart')
+  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null)
+  const [dismissedAlerts, setDismissedAlerts] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!itineraryId) return
@@ -86,15 +89,15 @@ export function ExpenseManager() {
     setError(null)
 
     try {
-      const [expensesData, statsData, summaryData] = await Promise.all([
+      const [itinerary, expensesData, statsData] = await Promise.all([
+        getItineraryById(itineraryId),
         getExpenses(itineraryId),
-        getExpenseStats(itineraryId),
-        getExpenseSummary(itineraryId)
+        getExpenseStats(itineraryId)
       ])
 
+      setBudget(itinerary?.budget || 0)
       setExpenses(expensesData)
       setStats(statsData)
-      setSummary(summaryData)
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载费用数据失败')
     } finally {
@@ -109,6 +112,31 @@ export function ExpenseManager() {
     }
     fetchData()
   }, [isAuthenticated, navigate, fetchData])
+
+  const budgetStatus: BudgetStatus = useMemo(() => {
+    return calculateBudgetStatus(budget, stats?.totalAmount || 0)
+  }, [budget, stats?.totalAmount])
+
+  const categoryBreakdown: CategoryExpense[] = useMemo(() => {
+    if (!stats) return []
+    return calculateCategoryExpenses(stats.amountByCategory, stats.totalAmount)
+  }, [stats])
+
+  const dailyBreakdown = useMemo(() => {
+    if (!stats) return []
+    return Object.entries(stats.amountByDate)
+      .map(([date, amount]) => ({ date, amount, count: 1 }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }, [stats])
+
+  const recommendations = useMemo(() => {
+    return generateRecommendations(budgetStatus, categoryBreakdown, dailyBreakdown)
+  }, [budgetStatus, categoryBreakdown, dailyBreakdown])
+
+  const filteredExpenses = useMemo(() => {
+    if (!selectedCategory) return expenses
+    return expenses.filter(e => e.category === selectedCategory)
+  }, [expenses, selectedCategory])
 
   const handleVoiceResult = useCallback((text: string) => {
     const parsed = parseVoiceToExpense(text)
@@ -191,13 +219,21 @@ export function ExpenseManager() {
     setEditingId(null)
   }
 
+  const handleCategoryClick = (category: ExpenseCategory) => {
+    setSelectedCategory(prev => prev === category ? null : category)
+  }
+
+  const handleDismissAlerts = () => {
+    setDismissedAlerts(true)
+  }
+
   if (!isAuthenticated) {
     return null
   }
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-gray-500">加载中...</p>
@@ -207,96 +243,151 @@ export function ExpenseManager() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-2xl">费用管理</CardTitle>
-          <CardDescription>
-            记录和管理您的旅行费用
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              {error}
-            </div>
-          )}
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">费用管理</h1>
+            <p className="text-sm text-gray-500">记录和管理您的旅行费用</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={viewMode === 'chart' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('chart')}
+          >
+            <BarChart3 className="w-4 h-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === 'list' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
 
-          {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-600">总支出</p>
-                <p className="text-2xl font-bold text-blue-700">
-                  ¥{stats.totalAmount.toLocaleString()}
-                </p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-600">日均支出</p>
-                <p className="text-2xl font-bold text-green-700">
-                  ¥{stats.averageDailyAmount.toLocaleString(undefined, {
-                    maximumFractionDigits: 0
-                  })}
-                </p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm text-purple-600">记录数</p>
-                <p className="text-2xl font-bold text-purple-700">
-                  {expenses.length} 条
-                </p>
-              </div>
-            </div>
-          )}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
+        </div>
+      )}
 
-          {summary.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                支出分布
-              </h3>
-              <div className="space-y-2">
-                {summary.map((item) => (
-                  <div key={item.category} className="flex items-center gap-3">
-                    <span className="w-16 text-sm text-gray-600">
-                      {CATEGORY_LABELS[item.category as ExpenseCategory] || item.category}
-                    </span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
-                      <div
-                        className="bg-primary h-full rounded-full transition-all duration-300"
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
-                    <span className="w-24 text-sm text-gray-600 text-right">
-                      ¥{item.amount.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {!dismissedAlerts && budgetStatus.status !== 'safe' && (
+        <div className="mb-6">
+          <OverBudgetAlertList
+            budgetStatus={budgetStatus}
+            categoryBreakdown={categoryBreakdown}
+            onDismiss={handleDismissAlerts}
+          />
+        </div>
+      )}
 
-          <div className="flex items-center gap-4 mb-6">
-            <Button
-              type="button"
-              onClick={() => {
-                setShowAddForm(!showAddForm)
-                setEditingId(null)
-                setFormData(DEFAULT_EXPENSE_FORM)
-              }}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              添加费用
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowVoiceInput(!showVoiceInput)}
-              className="flex items-center gap-2"
-            >
-              <Mic className="w-4 h-4" />
-              {showVoiceInput ? '关闭语音' : '语音输入'}
-            </Button>
+      {viewMode === 'chart' && (
+        <div className="space-y-6">
+          <BudgetOverview budgetStatus={budgetStatus} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">支出分类</CardTitle>
+                <CardDescription>按类别查看支出分布</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ExpensePieChart
+                  data={categoryBreakdown}
+                  onCategoryClick={handleCategoryClick}
+                  size="md"
+                />
+              </CardContent>
+            </Card>
+
+            <ExpenseBarChart
+              data={dailyBreakdown}
+              height={280}
+              className="lg:mt-0"
+            />
           </div>
 
+          <ExpenseAnalysis
+            report={{
+              totalSpent: stats?.totalAmount || 0,
+              averageDaily: stats?.averageDailyAmount || 0,
+              highestDay: dailyBreakdown.length > 0
+                ? dailyBreakdown.reduce((max, curr) => curr.amount > max.amount ? curr : max)
+                : null,
+              highestCategory: categoryBreakdown.length > 0
+                ? { category: categoryBreakdown[0].category, amount: categoryBreakdown[0].amount }
+                : null,
+              budgetStatus,
+              categoryBreakdown,
+              dailyBreakdown,
+              recommendations
+            }}
+          />
+        </div>
+      )}
+
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">
+                {viewMode === 'chart' ? '费用记录' : '全部费用'}
+              </CardTitle>
+              {selectedCategory && (
+                <CardDescription>
+                  筛选: {CATEGORY_LABELS[selectedCategory]}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className="ml-2 text-primary hover:underline"
+                  >
+                    清除
+                  </button>
+                </CardDescription>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setShowAddForm(!showAddForm)
+                  setEditingId(null)
+                  setFormData(DEFAULT_EXPENSE_FORM)
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                添加费用
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowVoiceInput(!showVoiceInput)}
+                className="flex items-center gap-2"
+              >
+                <Mic className="w-4 h-4" />
+                {showVoiceInput ? '关闭' : '语音'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           {showVoiceInput && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
               <h3 className="text-sm font-medium text-gray-700 mb-3">
@@ -461,21 +552,27 @@ export function ExpenseManager() {
             </Card>
           )}
 
-          {expenses.length === 0 ? (
+          {filteredExpenses.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              <p>暂无费用记录</p>
+              <p>{selectedCategory ? '该分类暂无费用记录' : '暂无费用记录'}</p>
               <p className="text-sm mt-2">点击上方按钮添加费用</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {expenses.map((expense) => (
+              {filteredExpenses.map((expense) => (
                 <div
                   key={expense.id}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="px-2 py-1 text-xs bg-primary/10 text-primary-700 rounded">
+                      <span
+                        className="px-2 py-1 text-xs rounded"
+                        style={{
+                          backgroundColor: `${CATEGORY_COLORS[expense.category]}20`,
+                          color: CATEGORY_COLORS[expense.category]
+                        }}
+                      >
                         {CATEGORY_LABELS[expense.category]}
                       </span>
                       <span className="font-medium">

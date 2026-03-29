@@ -270,17 +270,6 @@ serve(async (req) => {
       }
     }
 
-    const expenses = buildExpenses(itinerary.budget_breakdown, itineraryId, startDate)
-    if (expenses.length > 0) {
-      const { error: expensesError } = await supabase
-        .from('expenses')
-        .insert(expenses)
-
-      if (expensesError) {
-        console.error('保存费用记录失败:', expensesError)
-      }
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -761,50 +750,4 @@ function parsePriceRange(priceRange: string | undefined): number {
   if (!priceRange) return 0
   const match = priceRange.match(/(\d+)/)
   return match ? parseInt(match[1]) : 0
-}
-
-function buildExpenses(
-  budgetBreakdown: AIBudgetBreakdown | undefined,
-  itineraryId: string,
-  startDate: string
-): Array<{
-  itinerary_id: string
-  category: string
-  amount: number
-  expense_date: string
-  description: string
-}> {
-  if (!budgetBreakdown) return []
-
-  const categoryMap: Record<string, string> = {
-    'transportation': 'transport',
-    'accommodation': 'accommodation',
-    'food': 'food',
-    'tickets': 'ticket',
-    'shopping': 'shopping',
-    'entertainment': 'entertainment',
-    'other': 'other'
-  }
-
-  const expenses: Array<{
-    itinerary_id: string
-    category: string
-    amount: number
-    expense_date: string
-    description: string
-  }> = []
-
-  for (const [key, value] of Object.entries(budgetBreakdown)) {
-    if (key && value > 0) {
-      expenses.push({
-        itinerary_id: itineraryId,
-        category: categoryMap[key] || 'other',
-        amount: value,
-        expense_date: startDate,
-        description: `${key} 预算`
-      })
-    }
-  }
-
-  return expenses
 }
