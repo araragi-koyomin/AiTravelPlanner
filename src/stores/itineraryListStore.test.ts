@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   useItineraryListStore,
   sortItineraries,
@@ -8,7 +8,6 @@ import {
   type ItineraryFilterOptions,
   type ItinerarySortOptions
 } from './itineraryListStore'
-import type { ItineraryStatus } from '@/types/itinerary'
 
 const createMockItinerary = (overrides: Partial<{
   id: string

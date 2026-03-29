@@ -87,7 +87,7 @@ vi.mock('@/components/ui/Checkbox', () => ({
 
 vi.mock('@/components/ui/DropdownMenu', () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div data-testid="dropdown-menu">{children}</div>,
-  DropdownMenuTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => (
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dropdown-trigger">{children}</div>
   ),
   DropdownMenuContent: ({ children, align }: { children: React.ReactNode; align?: string }) => (
@@ -119,9 +119,14 @@ const createMockItinerary = (overrides: Partial<Itinerary> = {}): Itinerary => (
   end_date: '2024-03-03',
   budget: 5000,
   participants: 2,
-  special_requirements: '',
+  preferences: null,
+  special_requirements: null,
+  travelers_type: null,
+  accommodation_pref: null,
+  pace: null,
   is_favorite: false,
   status: 'draft',
+  cover_image: null,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   ...overrides

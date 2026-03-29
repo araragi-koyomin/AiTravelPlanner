@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Mic } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import {
@@ -9,6 +10,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/Card'
+import { VoiceInput } from '@/components/voice'
 import {
   ItineraryFormData,
   ItineraryFormErrors,
@@ -26,6 +28,7 @@ import { validateItineraryForm, isFormValid } from '@/utils/itineraryValidation'
 import { generateItinerary, getAIErrorMessage } from '@/services/ai'
 import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/services/supabase'
+import { parseVoiceToItinerary, mapParsedToFormData } from '@/utils/voiceParser'
 
 const FORM_STORAGE_KEY = 'itineraryFormData'
 
@@ -37,6 +40,7 @@ export function ItineraryPlanner() {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showVoiceInput, setShowVoiceInput] = useState(false)
 
   useEffect(() => {
     const savedData = localStorage.getItem(FORM_STORAGE_KEY)
@@ -178,6 +182,50 @@ export function ItineraryPlanner() {
     localStorage.removeItem(FORM_STORAGE_KEY)
   }, [])
 
+  const handleVoiceResult = useCallback((text: string) => {
+    const parsed = parseVoiceToItinerary(text)
+    const formUpdate = mapParsedToFormData(parsed)
+    
+    setFormData((prev) => ({
+      ...prev,
+      destination: formUpdate.destination || prev.destination,
+      startDate: formUpdate.startDate || prev.startDate,
+      endDate: formUpdate.endDate || prev.endDate,
+      budget: formUpdate.budget || prev.budget,
+      participants: formUpdate.participants || prev.participants,
+      specialRequirements: formUpdate.specialRequirements || prev.specialRequirements,
+      travelersType: formUpdate.travelersType || prev.travelersType,
+      accommodation: formUpdate.accommodation || prev.accommodation,
+      pace: formUpdate.pace || prev.pace,
+      preferences: formUpdate.preferences || prev.preferences
+    }))
+
+    setTouched({
+      destination: true,
+      startDate: true,
+      endDate: true,
+      budget: true,
+      participants: true,
+      preferences: true,
+      travelersType: true,
+      accommodation: true,
+      pace: true
+    })
+
+    const newFormData = {
+      ...formData,
+      destination: formUpdate.destination || formData.destination,
+      startDate: formUpdate.startDate || formData.startDate,
+      endDate: formUpdate.endDate || formData.endDate,
+      budget: formUpdate.budget || formData.budget,
+      participants: formUpdate.participants || formData.participants,
+      preferences: formUpdate.preferences || formData.preferences
+    }
+    const newErrors = validateItineraryForm(newFormData)
+    setErrors(newErrors)
+    setShowVoiceInput(false)
+  }, [formData])
+
   const today = new Date().toISOString().split('T')[0]
   const minEndDate = formData.startDate || today
 
@@ -191,6 +239,38 @@ export function ItineraryPlanner() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 flex items-center gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowVoiceInput(!showVoiceInput)}
+              className="flex items-center gap-2"
+            >
+              <Mic className="w-4 h-4" />
+              {showVoiceInput ? '关闭语音输入' : '语音输入'}
+            </Button>
+            <span className="text-sm text-gray-500">
+              使用语音快速填写表单
+            </span>
+          </div>
+
+          {showVoiceInput && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                语音输入行程需求
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                例如："我想去北京旅游，从2024年5月1日到5月3日，预算5000元，2个人"
+              </p>
+              <VoiceInput
+                onResult={handleVoiceResult}
+                onError={(error) => setSubmitError(error)}
+                placeholder="点击麦克风开始说话..."
+                maxDuration={30000}
+              />
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {submitError && (
               <div
