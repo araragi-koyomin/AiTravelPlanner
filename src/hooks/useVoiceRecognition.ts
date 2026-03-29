@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { VoiceStatus, VoiceRecognitionResult } from '../types/voice'
-import { XunfeiVoiceService, createXunfeiService } from '../services/xunfei'
+import { XunfeiVoiceService, createXunfeiServiceWithFallback } from '../services/xunfei'
+import { useAuthStore } from '../stores/authStore'
 
 interface UseVoiceRecognitionOptions {
   maxDuration?: number
@@ -28,6 +29,8 @@ export function useVoiceRecognition(
   options: UseVoiceRecognitionOptions = {}
 ): UseVoiceRecognitionReturn {
   const { maxDuration = DEFAULT_MAX_DURATION, onResult, onError, onStatusChange } = options
+  
+  const userId = useAuthStore((state) => state.user?.id)
 
   const [status, setStatus] = useState<VoiceStatus>('idle')
   const [text, setText] = useState('')
@@ -92,7 +95,7 @@ export function useVoiceRecognition(
       })
       mediaStreamRef.current = stream
 
-      xunfeiServiceRef.current = createXunfeiService()
+      xunfeiServiceRef.current = await createXunfeiServiceWithFallback(userId)
       xunfeiServiceRef.current.onResult(handleResult)
       xunfeiServiceRef.current.onError(handleError)
 

@@ -440,7 +440,41 @@ if (import.meta.env.PROD) {
 
 ## 10. 部署安全
 
-### 10.1 Docker 安全
+### 10.1 公开部署安全
+
+如果要将应用部署到公开域名（如 GitHub Pages、Vercel 等），必须遵循以下安全规范：
+
+#### 10.1.1 禁止在环境变量中配置真实 API Key
+
+```env
+# ❌ 错误：公开部署时不要配置真实的 API Key
+VITE_ZHIPU_API_KEY=your-real-api-key
+
+# ✅ 正确：公开部署时不配置 API Key，让用户自行配置
+# VITE_ZHIPU_API_KEY=（留空或删除）
+```
+
+#### 10.1.2 用户 API Key 隔离
+
+每个用户的 API Key 存储在 `user_settings` 表中，通过 RLS 策略确保：
+
+- 用户只能访问自己的 API Key
+- API Key 加密存储，即使数据库泄露也无法直接使用
+- 用户 API Key 仅用于当前用户的请求
+
+#### 10.1.3 加密密钥管理
+
+```env
+# 加密密钥必须配置（用于加密用户 API Key）
+VITE_ENCRYPTION_KEY=your-secret-encryption-key-at-least-32-chars
+```
+
+**重要**：
+- 加密密钥应该足够复杂（至少 32 字符）
+- 不要将加密密钥提交到 Git
+- 不同环境使用不同的加密密钥
+
+### 10.2 Docker 安全
 
 ```dockerfile
 # Dockerfile
@@ -473,7 +507,7 @@ EXPOSE 3000
 CMD ["node", "dist/server.js"]
 ```
 
-### 10.2 环境变量管理
+### 10.3 环境变量管理
 
 ```yaml
 # docker-compose.yml
@@ -566,6 +600,6 @@ npm install --save-dev eslint-plugin-security
 
 ---
 
-**文档版本**：v1.0
-**最后更新**：2026-03-12
+**文档版本**：v1.1
+**最后更新**：2026-03-30
 **维护者**：项目开发者
