@@ -270,3 +270,150 @@ export async function getExpenseSummary(
     throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('获取费用汇总失败')
   }
 }
+
+export interface DailyExpenseData {
+  date: string
+  amount: number
+  count: number
+  expenses: Expense[]
+}
+
+export async function getDailyExpenses(
+  itineraryId: string
+): Promise<DailyExpenseData[]> {
+  try {
+    const expenses = await getExpenses(itineraryId)
+
+    const dailyMap = new Map<string, DailyExpenseData>()
+
+    expenses.forEach(expense => {
+      const existing = dailyMap.get(expense.expense_date)
+      if (existing) {
+        existing.amount += expense.amount
+        existing.count += 1
+        existing.expenses.push(expense)
+      } else {
+        dailyMap.set(expense.expense_date, {
+          date: expense.expense_date,
+          amount: expense.amount,
+          count: 1,
+          expenses: [expense]
+        })
+      }
+    })
+
+    return Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+  } catch (error) {
+    console.error('获取每日支出失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('获取每日支出失败')
+  }
+}
+
+export interface BudgetAnalysisOptions {
+  budget: number
+  categoryBudgets?: Partial<Record<ExpenseCategory, number>>
+}
+
+export interface BudgetAnalysisResult {
+  totalSpent: number
+  averageDaily: number
+  highestDay: {
+    date: string
+    amount: number
+  } | null
+  highestCategory: {
+    category: ExpenseCategory
+    amount: number
+  } | null
+  budgetStatus: {
+    budget: number
+    spent: number
+    remaining: number
+    percentage: number
+    status: 'safe' | 'warning' | 'danger'
+  }
+  categoryBreakdown: Array<{
+    category: ExpenseCategory
+    amount: number
+    percentage: number
+    budget?: number
+    isOverBudget?: boolean
+  }>
+  dailyBreakdown: Array<{
+    date: string
+    amount: number
+    count: number
+  }>
+}
+
+export async function getBudgetAnalysis(
+  itineraryId: string,
+  options: BudgetAnalysisOptions
+): Promise<BudgetAnalysisResult> {
+  try {
+    const stats = await getExpenseStats(itineraryId)
+    const dailyExpenses = await getDailyExpenses(itineraryId)
+
+    const percentage = options.budget > 0 ? (stats.totalAmount / options.budget) * 100 : 0
+    let status: 'safe' | 'warning' | 'danger' = 'safe'
+    if (percentage >= 100) {
+      status = 'danger'
+    } else if (percentage >= 70) {
+      status = 'warning'
+    }
+
+    const budgetStatus = {
+      budget: options.budget,
+      spent: stats.totalAmount,
+      remaining: options.budget - stats.totalAmount,
+      percentage: Math.min(percentage, 100),
+      status
+    }
+
+    const categoryBreakdown: BudgetAnalysisResult['categoryBreakdown'] = Object.entries(stats.amountByCategory)
+      .map(([category, amount]) => ({
+        category: category as ExpenseCategory,
+        amount,
+        percentage: stats.totalAmount > 0 ? (amount / stats.totalAmount) * 100 : 0,
+        budget: options.categoryBudgets?.[category as ExpenseCategory],
+        isOverBudget: options.categoryBudgets?.[category as ExpenseCategory] !== undefined
+          ? amount > (options.categoryBudgets[category as ExpenseCategory] || 0)
+          : false
+      }))
+      .sort((a, b) => b.amount - a.amount)
+
+    const dailyBreakdown = dailyExpenses.map(d => ({
+      date: d.date,
+      amount: d.amount,
+      count: d.count
+    }))
+
+    let highestDay: { date: string; amount: number } | null = null
+    if (dailyBreakdown.length > 0) {
+      highestDay = dailyBreakdown.reduce((max, current) =>
+        current.amount > max.amount ? current : max
+      )
+    }
+
+    let highestCategory: { category: ExpenseCategory; amount: number } | null = null
+    if (categoryBreakdown.length > 0) {
+      highestCategory = {
+        category: categoryBreakdown[0].category,
+        amount: categoryBreakdown[0].amount
+      }
+    }
+
+    return {
+      totalSpent: stats.totalAmount,
+      averageDaily: stats.averageDailyAmount,
+      highestDay,
+      highestCategory,
+      budgetStatus,
+      categoryBreakdown,
+      dailyBreakdown
+    }
+  } catch (error) {
+    console.error('获取预算分析失败:', error)
+    throw error instanceof SupabaseErrorClass ? error : new SupabaseErrorClass('获取预算分析失败')
+  }
+}

@@ -523,7 +523,17 @@ export function ItineraryDetail() {
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>预算分解</CardTitle>
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle>预算分解</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/itineraries/${id}/expenses`)}
+            >
+              <DollarSign className="w-4 h-4 mr-1" />
+              费用管理
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
