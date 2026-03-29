@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ViewToggle } from './ViewToggle'
-import type { ViewMode } from '@/stores/itineraryListStore'
 
 vi.mock('@/components/ui/Button', () => ({
   Button: ({

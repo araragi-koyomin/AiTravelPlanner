@@ -12,6 +12,7 @@ const Register = lazy(() => import('@/pages/Register').then(m => ({ default: m.R
 const Itineraries = lazy(() => import('@/pages/Itineraries').then(m => ({ default: m.Itineraries })))
 const ItineraryPlanner = lazy(() => import('@/pages/ItineraryPlanner').then(m => ({ default: m.ItineraryPlanner })))
 const ItineraryDetail = lazy(() => import('@/pages/ItineraryDetail').then(m => ({ default: m.ItineraryDetail })))
+const ExpenseManager = lazy(() => import('@/pages/ExpenseManager').then(m => ({ default: m.ExpenseManager })))
 const SupabaseTest = lazy(() => import('@/pages/SupabaseTest').then(m => ({ default: m.SupabaseTest })))
 
 function PageLoader() {
@@ -62,6 +63,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ItineraryDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/itineraries/:itineraryId/expenses"
+                element={
+                  <ProtectedRoute>
+                    <ExpenseManager />
                   </ProtectedRoute>
                 }
               />
