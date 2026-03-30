@@ -110,6 +110,8 @@ AiTravelPlanner/
 | `test_report/Task2.9-费用预算功能验收报告.md`     | 费用预算功能验收报告      |
 | `test_report/Task2.10-费用记录功能测试报告.md`    | 费用记录功能测试报告      |
 | `test_report/Task2.10-费用记录功能验收报告.md`    | 费用记录功能验收报告      |
+| `test_report/Task3.2-行程导出功能测试报告.md`     | 行程导出功能测试报告      |
+| `test_report/Task3.2-行程导出功能验收报告.md`     | 行程导出功能验收报告      |
 
 ### 文档模板
 

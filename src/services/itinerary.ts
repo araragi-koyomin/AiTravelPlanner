@@ -22,6 +22,17 @@ export interface ItineraryStats {
   itemsByType: Record<string, number>
 }
 
+export interface BudgetBreakdown {
+  transport: number
+  accommodation: number
+  food: number
+  tickets: number
+  shopping: number
+  entertainment: number
+  other: number
+  total: number
+}
+
 export async function createItinerary(
   itineraryData: ItineraryInsert
 ): Promise<Itinerary> {

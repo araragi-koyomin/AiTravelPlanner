@@ -2,6 +2,8 @@ import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
+;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
 afterEach(() => {
   cleanup()
 })

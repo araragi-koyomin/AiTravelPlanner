@@ -21,6 +21,7 @@ import { ListView } from '@/components/itinerary/ListView'
 import { TimelineView } from '@/components/itinerary/TimelineView'
 import { EditToolbar } from '@/components/itinerary/EditToolbar'
 import { UnsavedChangesModal } from '@/components/itinerary/UnsavedChangesModal'
+import { ExportButton } from '@/components/export'
 import {
   TravelersTypeLabels,
   AccommodationPreferenceLabels,
@@ -361,18 +362,27 @@ export function ItineraryDetail() {
           <h1 className="text-3xl font-bold text-gray-900">{itinerary.title}</h1>
           <p className="mt-2 text-gray-600">{itinerary.destination}</p>
         </div>
-        <EditToolbar
-          isEditMode={isEditMode}
-          hasUnsavedChanges={hasUnsavedChanges}
-          canUndo={canUndo()}
-          canRedo={canRedo()}
-          isSaving={isSaving}
-          onEnterEdit={handleEnterEditMode}
-          onExitEdit={handleExitEditMode}
-          onSave={handleSave}
-          onUndo={undo}
-          onRedo={redo}
-        />
+        <div className="flex items-center gap-2">
+          <EditToolbar
+            isEditMode={isEditMode}
+            hasUnsavedChanges={hasUnsavedChanges}
+            canUndo={canUndo()}
+            canRedo={canRedo()}
+            isSaving={isSaving}
+            onEnterEdit={handleEnterEditMode}
+            onExitEdit={handleExitEditMode}
+            onSave={handleSave}
+            onUndo={undo}
+            onRedo={redo}
+          />
+          {!isEditMode && itinerary && (
+            <ExportButton
+              itinerary={itinerary}
+              dailySchedule={dailySchedule}
+              budgetBreakdown={budgetBreakdown}
+            />
+          )}
+        </div>
       </div>
 
       <Card className="mb-8">
