@@ -27,6 +27,7 @@ import {
 import { validateItineraryForm, isFormValid } from '@/utils/itineraryValidation'
 import { generateItinerary, getAIErrorMessage } from '@/services/ai'
 import { useAuthStore } from '@/stores/authStore'
+import { withSyncStatus } from '@/stores/syncStore'
 import { supabase } from '@/services/supabase'
 import { parseVoiceToItinerary, mapParsedToFormData } from '@/utils/voiceParser'
 
@@ -145,7 +146,7 @@ export function ItineraryPlanner() {
       setSubmitError(null)
 
       try {
-        const result = await generateItinerary({
+        const result = await withSyncStatus(() => generateItinerary({
           destination: formData.destination,
           startDate: formData.startDate,
           endDate: formData.endDate,
@@ -157,7 +158,7 @@ export function ItineraryPlanner() {
           accommodation: formData.accommodation,
           pace: formData.pace,
           userId: user.id
-        })
+        }))
 
         if (result.success && result.itinerary) {
           localStorage.removeItem(FORM_STORAGE_KEY)

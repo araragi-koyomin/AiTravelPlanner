@@ -243,6 +243,25 @@ export async function getExpenseStats(
   }
 }
 
+export function calculateStatsFromExpenses(expenses: Expense[]): ExpenseStats {
+  const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+
+  const amountByCategory: Record<string, number> = {}
+  expenses.forEach(expense => {
+    amountByCategory[expense.category] = (amountByCategory[expense.category] || 0) + expense.amount
+  })
+
+  const amountByDate: Record<string, number> = {}
+  expenses.forEach(expense => {
+    amountByDate[expense.expense_date] = (amountByDate[expense.expense_date] || 0) + expense.amount
+  })
+
+  const uniqueDates = Object.keys(amountByDate).length
+  const averageDailyAmount = uniqueDates > 0 ? totalAmount / uniqueDates : 0
+
+  return { totalAmount, amountByCategory, amountByDate, averageDailyAmount }
+}
+
 export async function getExpenseSummary(
   itineraryId: string
 ): Promise<ExpenseSummary[]> {

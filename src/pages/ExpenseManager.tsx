@@ -25,12 +25,16 @@ import {
   updateExpense,
   deleteExpense,
   getExpenseStats,
+  calculateStatsFromExpenses,
   type Expense,
   type ExpenseStats
 } from '@/services/expense'
 import { getItineraryById } from '@/services/itinerary'
 import { parseVoiceToExpense } from '@/utils/voiceParser'
 import { calculateBudgetStatus, calculateCategoryExpenses, generateRecommendations } from '@/utils/expenseUtils'
+import { SyncStatusIndicator } from '@/components/sync'
+import { withSyncStatus } from '@/stores/syncStore'
+import { useExpensesRealtime } from '@/hooks/useRealtime'
 import type { ExpenseCategory, PaymentMethod } from '@/services/supabase'
 import { CATEGORY_LABELS, CATEGORY_COLORS, type BudgetStatus, type CategoryExpense } from '@/types/expense'
 
@@ -81,6 +85,37 @@ export function ExpenseManager() {
   const [viewMode, setViewMode] = useState<ViewMode>('chart')
   const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | null>(null)
   const [dismissedAlerts, setDismissedAlerts] = useState(false)
+
+  useExpensesRealtime({
+    itineraryId: itineraryId || '',
+    enabled: !!itineraryId,
+    onInsert: (newExpense) => {
+      setExpenses((prev) => {
+        if (prev.some((e) => e.id === newExpense.id)) {
+          return prev
+        }
+        const updated = [...prev, newExpense]
+        setStats(calculateStatsFromExpenses(updated))
+        return updated
+      })
+    },
+    onUpdate: (updatedExpense) => {
+      setExpenses((prev) => {
+        const next = prev.map((expense) =>
+          expense.id === updatedExpense.id ? updatedExpense : expense
+        )
+        setStats(calculateStatsFromExpenses(next))
+        return next
+      })
+    },
+    onDelete: (deletedId) => {
+      setExpenses((prev) => {
+        const next = prev.filter((expense) => expense.id !== deletedId)
+        setStats(calculateStatsFromExpenses(next))
+        return next
+      })
+    }
+  })
 
   const fetchData = useCallback(async () => {
     if (!itineraryId) return
@@ -160,16 +195,16 @@ export function ExpenseManager() {
 
     try {
       if (editingId) {
-        await updateExpense(editingId, {
+        await withSyncStatus(() => updateExpense(editingId, {
           category: formData.category,
           amount: Number(formData.amount),
           expense_date: formData.expense_date,
           payment_method: formData.payment_method,
           description: formData.description || null,
           notes: formData.notes || null
-        })
+        }))
       } else {
-        await createExpense({
+        await withSyncStatus(() => createExpense({
           itinerary_id: itineraryId,
           category: formData.category,
           amount: Number(formData.amount),
@@ -177,7 +212,7 @@ export function ExpenseManager() {
           payment_method: formData.payment_method,
           description: formData.description || null,
           notes: formData.notes || null
-        })
+        }))
       }
 
       setFormData(DEFAULT_EXPENSE_FORM)
@@ -206,7 +241,7 @@ export function ExpenseManager() {
     if (!confirm('确定要删除这条费用记录吗？')) return
 
     try {
-      await deleteExpense(id)
+      await withSyncStatus(() => deleteExpense(id))
       fetchData()
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除费用失败')
@@ -260,6 +295,7 @@ export function ExpenseManager() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SyncStatusIndicator showLabel={false} showLastSync={false} />
           <Button
             type="button"
             variant={viewMode === 'chart' ? 'primary' : 'outline'}
