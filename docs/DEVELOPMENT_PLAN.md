@@ -480,17 +480,30 @@
 
 **任务清单：**
 
-- [x] 实现 Supabase Realtime 订阅
-- [x] 实现多设备数据同步
+- [x] 实现 Supabase Realtime 订阅（行程/行程项/费用三层订阅）
+- [x] 实现多设备数据同步（INSERT/UPDATE/DELETE 全量同步）
+- [x] 实现同步状态管理 Store（syncStore.ts）
+- [x] 实现同步状态 UI 组件（SyncStatusIndicator/PendingSyncBadge）
+- [x] 修复 Realtime Publication 未配置问题
+- [x] 修复 REPLICA IDENTITY 导致删除不同步问题
+- [x] 修复费用衍生数据不跟随 Realtime 更新问题
+- [x] 修复 SyncStatusIndicator 状态永不切换问题
+- [x] 集成 withSyncStatus 到 4 个页面的数据操作
+- [x] 单元测试（118 个测试用例，100% 通过率）
+- [x] 测试报告和验收报告
 - [ ] 优化页面加载性能
 - [ ] 优化地图渲染性能
-- [ ] 添加骨架屏加载
 - [ ] 优化图片加载（懒加载）
 
 **交付物：**
 
-- 云端同步功能
-- 性能优化
+- ✅ Realtime 服务层（realtime.ts）
+- ✅ 同步状态管理 Store（syncStore.ts）
+- ✅ Realtime Hooks（useRealtime.ts）
+- ✅ 同步状态组件（SyncStatusIndicator/PendingSyncBadge）
+- ✅ 数据库迁移脚本（013_enable_realtime.sql、014_fix_realtime_replica_identity.sql）
+- ✅ 单元测试（118 个测试用例）
+- ✅ 测试报告和验收报告
 
 ***
 
@@ -678,7 +691,7 @@ async function getApiKey(userId: string, keyType: string): Promise<string | unde
 | M1: 项目初始化完成 | 第1周结束 | 项目脚手架、基础组件、路由配置     | ✅ 已完成                                                           |
 | M2: 认证系统完成   | 第2周结束 | 用户注册登录、数据库设计、API 封装 | ✅ 已完成                                                           |
 | M3: 核心功能完成   | 第4周结束 | 行程生成、地图展示、行程管理       | ✅ 已完成                                                           |
-| M4: 增强功能完成   | 第6周结束 | 语音识别、费用管理、行程导出     | ✅ 已完成（语音识别、费用预算、费用记录、行程导出均已完成）         |
+| M4: 增强功能完成   | 第6周结束 | 语音识别、费用管理、行程导出、云端同步     | ✅ 已完成（语音识别、费用预算、费用记录、行程导出、云端同步均已完成）         |
 | M5: 测试完成       | 第7周结束 | Bug 修复、单元测试、功能测试       | ⬜ 待开始                                                           |
 | M6: 项目交付       | 第8周结束 | Docker 镜像、文档、GitHub 仓库     | ⬜ 待开始                                                           |
 
@@ -877,6 +890,6 @@ VITE_ENCRYPTION_KEY=your_encryption_key
 
 ***
 
-**文档版本**：v1.5
-**最后更新**：2026-03-29
+**文档版本**：v1.6
+**最后更新**：2026-04-02
 **维护者**：项目开发者
