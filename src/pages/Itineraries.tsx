@@ -18,7 +18,9 @@ import { ViewToggle } from '@/components/itinerary/ViewToggle'
 import { ItineraryCard } from '@/components/itinerary/ItineraryCard'
 import { CopyItineraryModal } from '@/components/itinerary/CopyItineraryModal'
 import { ItineraryBatchActions } from '@/components/itinerary/ItineraryBatchActions'
+import { withSyncStatus } from '@/stores/syncStore'
 import { Pagination } from '@/components/itinerary/Pagination'
+import { SyncStatusIndicator } from '@/components/sync'
 import {
   useItineraryListStore,
   sortItineraries,
@@ -26,6 +28,7 @@ import {
   paginateItineraries,
   getTotalPages
 } from '@/stores/itineraryListStore'
+import { useItinerariesRealtime } from '@/hooks/useRealtime'
 import { Plus } from 'lucide-react'
 
 export function Itineraries() {
@@ -60,6 +63,29 @@ export function Itineraries() {
   const [copyingItinerary, setCopyingItinerary] = useState<Itinerary | null>(null)
   const [isCopying, setIsCopying] = useState(false)
   const [isBatchDeleting, setIsBatchDeleting] = useState(false)
+
+  useItinerariesRealtime({
+    userId: user?.id || '',
+    enabled: !!user?.id,
+    onInsert: (newItinerary) => {
+      setItineraries((prev) => {
+        if (prev.some((i) => i.id === newItinerary.id)) {
+          return prev
+        }
+        return [newItinerary, ...prev]
+      })
+    },
+    onUpdate: (updatedItinerary) => {
+      setItineraries((prev) =>
+        prev.map((item) =>
+          item.id === updatedItinerary.id ? updatedItinerary : item
+        )
+      )
+    },
+    onDelete: (deletedId) => {
+      setItineraries((prev) => prev.filter((item) => item.id !== deletedId))
+    }
+  })
 
   const loadItineraries = useCallback(async () => {
     if (!user) {
@@ -121,7 +147,7 @@ export function Itineraries() {
       }
 
       try {
-        await deleteItinerary(id)
+        await withSyncStatus(() => deleteItinerary(id))
         setItineraries((prev) => prev.filter((item) => item.id !== id))
       } catch (err) {
         console.error('删除行程失败:', err)
@@ -133,7 +159,7 @@ export function Itineraries() {
 
   const handleToggleFavorite = useCallback(async (id: string, currentStatus: boolean) => {
     try {
-      await toggleFavorite(id)
+      await withSyncStatus(() => toggleFavorite(id))
       setItineraries((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, is_favorite: !currentStatus } : item
@@ -159,7 +185,7 @@ export function Itineraries() {
 
       try {
         setIsCopying(true)
-        const newItinerary = await duplicateItinerary(copyingItinerary.id, newTitle)
+        const newItinerary = await withSyncStatus(() => duplicateItinerary(copyingItinerary.id, newTitle))
         setItineraries((prev) => [newItinerary, ...prev])
         setCopyModalOpen(false)
         setCopyingItinerary(null)
@@ -195,7 +221,7 @@ export function Itineraries() {
 
     try {
       setIsBatchDeleting(true)
-      await Promise.all(selectedIds.map((id) => deleteItinerary(id)))
+      await Promise.all(selectedIds.map((id) => withSyncStatus(() => deleteItinerary(id))))
       setItineraries((prev) => prev.filter((item) => !selectedIds.includes(item.id)))
       clearSelection()
       setBatchMode(false)
@@ -216,7 +242,7 @@ export function Itineraries() {
           selectedIds.map(async (id) => {
             const itinerary = itineraries.find((item) => item.id === id)
             if (itinerary && itinerary.is_favorite !== isFavorite) {
-              await toggleFavorite(id)
+              await withSyncStatus(() => toggleFavorite(id))
             }
           })
         )
@@ -267,7 +293,8 @@ export function Itineraries() {
           <h1 className="text-3xl font-bold text-gray-900">我的行程</h1>
           <p className="mt-2 text-gray-600">管理您的旅行计划</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <SyncStatusIndicator showLabel={false} showLastSync={false} />
           {!isBatchMode && (
             <Link to="/itineraries/new">
               <Button className="gap-1">

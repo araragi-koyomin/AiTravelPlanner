@@ -22,6 +22,9 @@ import { TimelineView } from '@/components/itinerary/TimelineView'
 import { EditToolbar } from '@/components/itinerary/EditToolbar'
 import { UnsavedChangesModal } from '@/components/itinerary/UnsavedChangesModal'
 import { ExportButton } from '@/components/export'
+import { SyncStatusIndicator } from '@/components/sync'
+import { withSyncStatus } from '@/stores/syncStore'
+import { useItineraryItemsRealtime } from '@/hooks/useRealtime'
 import {
   TravelersTypeLabels,
   AccommodationPreferenceLabels,
@@ -68,6 +71,29 @@ export function ItineraryDetail() {
     getChangedItems,
     markAsSaved
   } = useItineraryEditStore()
+
+  useItineraryItemsRealtime({
+    itineraryId: id || '',
+    enabled: !!id && !isEditMode,
+    onInsert: (newItem) => {
+      setItems((prev) => {
+        if (prev.some((i) => i.id === newItem.id)) {
+          return prev
+        }
+        return [...prev, newItem]
+      })
+    },
+    onUpdate: (updatedItem) => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item
+        )
+      )
+    },
+    onDelete: (deletedId) => {
+      setItems((prev) => prev.filter((item) => item.id !== deletedId))
+    }
+  })
 
   const loadItinerary = useCallback(async () => {
     if (!id) {
@@ -208,7 +234,7 @@ export function ItineraryDetail() {
   const handleSave = useCallback(async () => {
     const { added, updated, deleted } = getChangedItems()
 
-    try {
+    await withSyncStatus(async () => {
       if (added.length > 0) {
         const itemsToCreate = added.map(item => ({
           itinerary_id: item.itinerary_id,
@@ -258,10 +284,7 @@ export function ItineraryDetail() {
         exitEditMode()
         setPendingExit(false)
       }
-    } catch (err) {
-      console.error('保存失败:', err)
-      alert('保存失败，请重试')
-    }
+    })
   }, [getChangedItems, markAsSaved, loadItinerary, pendingExit, exitEditMode])
 
   const handleDiscardChanges = useCallback(() => {
@@ -363,6 +386,7 @@ export function ItineraryDetail() {
           <p className="mt-2 text-gray-600">{itinerary.destination}</p>
         </div>
         <div className="flex items-center gap-2">
+          <SyncStatusIndicator showLabel={false} showLastSync={false} />
           <EditToolbar
             isEditMode={isEditMode}
             hasUnsavedChanges={hasUnsavedChanges}
