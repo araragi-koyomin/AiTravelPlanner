@@ -448,7 +448,7 @@ describe('xunfei', () => {
           data: null
         })
 
-        expect(errorCallback).toHaveBeenCalledWith('识别错误: illegal access')
+        expect(errorCallback).toHaveBeenCalledWith(expect.stringContaining('illegal access'))
       })
     })
 

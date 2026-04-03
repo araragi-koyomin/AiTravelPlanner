@@ -121,13 +121,13 @@ function normalizeDate(dateStr: string): string | undefined {
   const now = new Date()
   const currentYear = now.getFullYear()
 
-  const fullDateMatch = dateStr.match(/(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})/)
+  const fullDateMatch = dateStr.match(/(\d{4})[年\-/](\d{1,2})[月\-/](\d{1,2})/)
   if (fullDateMatch) {
     const [, year, month, day] = fullDateMatch
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
   }
 
-  const shortDateMatch = dateStr.match(/(\d{1,2})[月\-\/](\d{1,2})/)
+  const shortDateMatch = dateStr.match(/(\d{1,2})[月\-/](\d{1,2})/)
   if (shortDateMatch) {
     const [, month, day] = shortDateMatch
     return `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
@@ -169,22 +169,22 @@ export function parseVoiceToItinerary(text: string): ParsedItineraryVoice {
     }
   }
 
-  const startDateMatch = text.match(/(?:从|开始|出发)[是为]?\s*(\d{4}[年\-\/]\d{1,2}[月\-\/]\d{1,2}[日号]?)/)
+  const startDateMatch = text.match(/(?:从|开始|出发)[是为]?\s*(\d{4}[年\-/]\d{1,2}[月\-/]\d{1,2}[日号]?)/)
   if (startDateMatch) {
     result.startDate = normalizeDate(startDateMatch[1])
   }
 
-  const endDateMatch = text.match(/(?:到|至|结束|返回)[是为]?\s*(\d{4}[年\-\/]\d{1,2}[月\-\/]\d{1,2}[日号]?)/)
+  const endDateMatch = text.match(/(?:到|至|结束|返回)[是为]?\s*(\d{4}[年\-/]\d{1,2}[月\-/]\d{1,2}[日号]?)/)
   if (endDateMatch) {
     result.endDate = normalizeDate(endDateMatch[1])
   }
 
   if (!result.endDate) {
-    const shortEndDateMatch = text.match(/(?:到|至)\s*(\d{1,2}[月\-\/]\d{1,2}[日号]?)/)
+    const shortEndDateMatch = text.match(/(?:到|至)\s*(\d{1,2}[月\-/]\d{1,2}[日号]?)/)
     if (shortEndDateMatch && result.startDate) {
       const startYear = result.startDate.split('-')[0]
       const monthDay = shortEndDateMatch[1]
-      const monthMatch = monthDay.match(/(\d{1,2})[月\-\/](\d{1,2})/)
+      const monthMatch = monthDay.match(/(\d{1,2})[月\-/](\d{1,2})/)
       if (monthMatch) {
         result.endDate = `${startYear}-${monthMatch[1].padStart(2, '0')}-${monthMatch[2].padStart(2, '0')}`
       }
@@ -308,7 +308,7 @@ export function parseVoiceToExpense(text: string): ParsedExpenseVoice {
     }
   }
 
-  const dateMatch = text.match(/(\d{4}[年\-\/]\d{1,2}[月\-\/]\d{1,2}[日号]?)|(\d{1,2}[月\-\/]\d{1,2}[日号]?)/)
+  const dateMatch = text.match(/(\d{4}[年\-/]\d{1,2}[月\-/]\d{1,2}[日号]?)|(\d{1,2}[月\-/]\d{1,2}[日号]?)/)
   if (dateMatch) {
     result.date = normalizeDate(dateMatch[0])
   }

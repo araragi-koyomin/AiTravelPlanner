@@ -82,12 +82,10 @@ describe('ItineraryPlanner', () => {
     localStorage.clear()
     vi.mocked(generateItinerary).mockResolvedValue(mockItineraryResult)
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { session: { access_token: 'test-token', refresh_token: 'test-refresh-token', expires_in: 3600, token_type: 'bearer', user: { id: 'test-user-id', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '2024-01-01T00:00:00Z' } } } as any,
       error: null
     })
     vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { session: { access_token: 'test-token', refresh_token: 'test-refresh-token', expires_in: 3600, token_type: 'bearer', user: { id: 'test-user-id', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '2024-01-01T00:00:00Z' } } } as any,
       error: null
     })

@@ -105,7 +105,7 @@ describe('realtime service', () => {
       const callback = vi.fn()
 
       const unsubscribe = createSubscription(
-        { table: 'test_table', filter: { column: 'id', value: '123', operator: 'eq' } },
+        { table: 'itineraries', filter: { column: 'id', value: '123', operator: 'eq' } },
         callback
       )
 
@@ -116,7 +116,7 @@ describe('realtime service', () => {
       const callback = vi.fn()
 
       const unsubscribe = createSubscription(
-        { table: 'test_table', enabled: false },
+        { table: 'itineraries', enabled: false },
         callback
       )
 
@@ -126,7 +126,7 @@ describe('realtime service', () => {
     it('无 filter 时应该使用 all 作为 channel 名称后缀', () => {
       const callback = vi.fn()
 
-      createSubscription({ table: 'my_table' }, callback)
+      createSubscription({ table: 'expenses' }, callback)
     })
 
     it('数组 filter 值应该用括号包裹', () => {
@@ -134,7 +134,7 @@ describe('realtime service', () => {
 
       createSubscription(
         {
-          table: 'my_table',
+          table: 'expenses',
           filter: { column: 'status', value: ['a', 'b'], operator: 'in' }
         },
         callback

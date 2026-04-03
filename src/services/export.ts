@@ -295,7 +295,7 @@ export async function exportToImage(
       onclone: (clonedDoc) => {
         const clonedElement = clonedDoc.body.querySelector('[data-export-container]')
         if (clonedElement) {
-          ;(clonedElement as HTMLElement).style.width = '100%'
+          (clonedElement as HTMLElement).style.width = '100%'
         }
       }
     })

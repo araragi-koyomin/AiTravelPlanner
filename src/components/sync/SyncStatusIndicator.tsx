@@ -31,18 +31,15 @@ const colorMap = {
 export function SyncStatusIndicator({
   status: propStatus,
   lastSyncTime: propLastSyncTime,
-  pendingCount: propPendingCount,
   showLabel = true,
   showLastSync = true,
   className
 }: SyncStatusIndicatorProps) {
   const storeStatus = useSyncStore((state) => state.status)
   const storeLastSyncTime = useSyncStore((state) => state.lastSyncTime)
-  const storePendingCount = useSyncStore((state) => state.pendingOperations.length)
 
   const status = propStatus ?? storeStatus
   const lastSyncTime = propLastSyncTime ?? storeLastSyncTime
-  const pendingCount = propPendingCount ?? storePendingCount
 
   const statusInfo = SYNC_STATUS_INFO[status]
   const IconComponent = iconMap[statusInfo.icon]

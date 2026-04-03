@@ -2,8 +2,7 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import {
   subscribeToItineraries,
   subscribeToItineraryItems,
-  subscribeToExpenses,
-  isOnline
+  subscribeToExpenses
 } from '@/services/realtime'
 import type { Itinerary, ItineraryItem, Expense } from '@/services/types'
 

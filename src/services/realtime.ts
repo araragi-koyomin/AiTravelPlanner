@@ -4,7 +4,9 @@ import type {
   RealtimeSubscriptionCallback,
   SubscriptionOptions
 } from '@/types/sync'
-import type { RealtimePostgresChangesPayload, RealtimeChannel, RealtimeSubscribeStatus } from '@supabase/supabase-js'
+import type { RealtimePostgresChangesPayload, RealtimeChannel } from '@supabase/supabase-js'
+
+type RealtimeSubscribeStatus = 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED' | string
 
 const activeChannels: Map<string, RealtimeChannel> = new Map()
 
@@ -60,7 +62,7 @@ export function subscribeToItineraries(
         filter: `user_id=eq.${userId}`
       },
       (payload: RealtimePostgresChangesPayload<Itinerary>) => {
-        logEventReceived(channelName, payload.eventType, 'itineraries', payload.new?.id)
+        logEventReceived(channelName, payload.eventType, 'itineraries', (payload.new as Itinerary)?.id)
         handleItineraryChange(payload, onInsert, onUpdate, onDelete)
       }
     )
@@ -142,7 +144,7 @@ export function subscribeToItineraryItems(
         filter: `itinerary_id=eq.${itineraryId}`
       },
       (payload: RealtimePostgresChangesPayload<ItineraryItem>) => {
-        logEventReceived(channelName, payload.eventType, 'itinerary_items', payload.new?.id)
+        logEventReceived(channelName, payload.eventType, 'itinerary_items', (payload.new as ItineraryItem)?.id)
         handleItineraryItemChange(payload, onInsert, onUpdate, onDelete)
       }
     )
@@ -224,7 +226,7 @@ export function subscribeToExpenses(
         filter: `itinerary_id=eq.${itineraryId}`
       },
       (payload: RealtimePostgresChangesPayload<Expense>) => {
-        logEventReceived(channelName, payload.eventType, 'expenses', payload.new?.id)
+        logEventReceived(channelName, payload.eventType, 'expenses', (payload.new as Expense)?.id)
         handleExpenseChange(payload, onInsert, onUpdate, onDelete)
       }
     )

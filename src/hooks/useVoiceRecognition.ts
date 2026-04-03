@@ -44,6 +44,7 @@ export function useVoiceRecognition(
   const workletNodeRef = useRef<AudioWorkletNode | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(0)
+  const stopRecordingRef = useRef<(() => void) | null>(null)
 
   const isSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
@@ -134,14 +135,14 @@ export function useVoiceRecognition(
         setDuration(elapsed)
 
         if (elapsed >= maxDuration) {
-          stopRecording()
+          stopRecordingRef.current?.()
         }
       }, 100)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '启动录音失败'
       handleError(errorMessage)
     }
-  }, [isSupported, handleResult, handleError, updateStatus, maxDuration])
+  }, [isSupported, handleResult, handleError, updateStatus, maxDuration, userId])
 
   const stopRecording = useCallback(() => {
     if (timerRef.current) {
@@ -175,6 +176,8 @@ export function useVoiceRecognition(
     updateStatus('idle')
     setVolume(0)
   }, [updateStatus])
+
+  stopRecordingRef.current = stopRecording
 
   const reset = useCallback(() => {
     stopRecording()
