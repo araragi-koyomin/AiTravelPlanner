@@ -28,8 +28,19 @@ AiTravelPlanner/
 │   ├── rules/               # 项目规则
 │   └── templates/           # 文档模板
 ├── src/                     # 源代码
+│   ├── test/                # 共享测试基础设施（setup/factories/mocks）
+│   ├── tests/integration/   # 集成测试（6个文件，94个用例）
+│   ├── **/*.test.{ts,tsx}   # 单元/组件测试（co-located，~70个文件）
+│   ├── components/          # 组件
+│   ├── pages/               # 页面
+│   ├── services/            # 服务层
+│   ├── stores/              # 状态管理
+│   ├── hooks/               # 自定义 Hooks
+│   ├── utils/               # 工具函数
+│   └── config/              # 配置文件
 ├── public/                  # 静态资源
 ├── docker/                  # Docker 配置
+├── supabase/                # Supabase 脚本（migrations/functions）
 ├── test_report/             # 测试报告和验收报告
 ├── .env.example             # 环境变量模板
 ├── package.json             # 项目配置
@@ -114,6 +125,8 @@ AiTravelPlanner/
 | `test_report/Task3.2-行程导出功能验收报告.md`     | 行程导出功能验收报告      |
 | `test_report/Task3.3-云端同步与优化功能测试报告.md` | 云端同步与优化功能测试报告 |
 | `test_report/Task3.3-云端同步与优化功能验收报告.md` | 云端同步与优化功能验收报告 |
+| `test_report/Task7-测试与Bug修复测试报告.md`       | 第7周测试与Bug修复测试报告    |
+| `test_report/Task7-测试与Bug修复验收报告.md`       | 第7周测试与Bug修复验收报告    |
 
 ### 文档模板
 
@@ -273,7 +286,7 @@ docker-compose logs -f # 查看日志
 
 ---
 
-**最后更新**: 2026-04-02
+**最后更新**: 2026-04-04
 
 ## 数据库重构说明
 

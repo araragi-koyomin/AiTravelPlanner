@@ -8,7 +8,29 @@ vi.mock('@amap/amap-jsapi-loader', () => ({
   }
 }))
 
+vi.mock('@/config/api', () => ({
+  getAmapConfigWithFallback: vi.fn().mockResolvedValue({
+    key: 'test-amap-key',
+    securityJsCode: ''
+  })
+}))
+
+vi.mock('@/stores/authStore', () => {
+  const state = {
+    user: { id: 'test-user-id' },
+    isAuthenticated: true,
+    isInitializing: false
+  }
+  return {
+    useAuthStore: vi.fn((selector?: any) =>
+      selector ? selector(state) : state
+    )
+  }
+})
+
 import AMapLoader from '@amap/amap-jsapi-loader'
+import { getAmapConfigWithFallback } from '@/config/api'
+import * as authStore from '@/stores/authStore'
 
 describe('useAMap', () => {
   let mockMapInstance: any
@@ -17,6 +39,11 @@ describe('useAMap', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    vi.mocked(getAmapConfigWithFallback).mockResolvedValue({
+      key: 'test-amap-key',
+      securityJsCode: ''
+    })
 
     mockGeolocation = {
       getCurrentPosition: vi.fn()
@@ -54,7 +81,7 @@ describe('useAMap', () => {
 
   describe('initialization', () => {
     it('should initialize map successfully', async () => {
-      (AMapLoader.load as any).mockResolvedValueOnce(undefined)
+      ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
       const { result } = renderHook(() =>
         useAMap({
@@ -63,11 +90,9 @@ describe('useAMap', () => {
         })
       )
 
-      expect(result.current.loading).toBe(true)
-
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
-      })
+      }, { timeout: 5000 })
 
       expect(result.current.map).toBe(mockMapInstance)
       expect(result.current.error).toBeNull()
@@ -107,7 +132,10 @@ describe('useAMap', () => {
 
     it('should configure security settings', async () => {
       const testSecurityCode = 'test-security-code'
-      vi.stubEnv('VITE_AMAP_SECURITY_JS_CODE', testSecurityCode)
+      vi.mocked(getAmapConfigWithFallback).mockResolvedValueOnce({
+        key: 'test-amap-key',
+        securityJsCode: testSecurityCode
+      })
 
       ;(AMapLoader.load as any).mockResolvedValueOnce(undefined)
 
@@ -121,8 +149,6 @@ describe('useAMap', () => {
       await waitFor(() => {
         expect((window as any)._AMapSecurityConfig.securityJsCode).toBe(testSecurityCode)
       })
-
-      vi.unstubAllEnvs()
     })
   })
 

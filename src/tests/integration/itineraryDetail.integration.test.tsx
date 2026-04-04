@@ -5,6 +5,12 @@ import { ItineraryDetail } from '@/pages/ItineraryDetail'
 import * as itineraryService from '@/services/itinerary'
 import * as authStore from '@/stores/authStore'
 
+vi.mock('@/services/realtime', () => ({
+  subscribeToItineraries: vi.fn(() => vi.fn()),
+  subscribeToItineraryItems: vi.fn(() => vi.fn()),
+  subscribeToExpenses: vi.fn(() => vi.fn())
+}))
+
 const mockUseAuthStore = vi.spyOn(authStore, 'useAuthStore')
 const mockGetItineraryById = vi.spyOn(itineraryService, 'getItineraryById')
 const mockGetItineraryItems = vi.spyOn(itineraryService, 'getItineraryItems')

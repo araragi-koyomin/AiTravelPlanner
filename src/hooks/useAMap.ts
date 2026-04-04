@@ -129,7 +129,7 @@ export function useAMap(options: UseAMapOptions): UseAMapReturn {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
   const destroyMap = useCallback(() => {
     if (mapRef.current) {

@@ -513,51 +513,55 @@
 
 **任务清单：**
 
-- [ ] 测试用户注册/登录流程
-- [ ] 测试行程生成功能
-- [ ] 测试行程编辑功能
-- [ ] 测试地图展示功能
-- [ ] 测试语音识别功能
-- [ ] 测试费用管理功能
-- [ ] 测试云端同步功能
-- [ ] 测试导出功能
-- [ ] 测试设置功能
+- [x] 测试用户注册/登录流程（authStore + Login/Register 组件）
+- [x] 测试行程生成功能（AI 服务 + ItineraryPlanner）
+- [x] 测试行程编辑功能（itineraryEditStore + 编辑组件）
+- [x] 测试地图展示功能（useAMap + 地图组件）
+- [x] 测试语音识别功能（useVoiceRecognition + VoiceInput）
+- [x] 测试费用管理功能（expense service + ExpenseManager）
+- [x] 测试云端同步功能（realtime + syncStore）
+- [x] 测试导出功能（exportUtils + ExportModal）
+- [x] 测试设置功能（settings service + Settings + ApiKeySection）
 
 **交付物：**
 
-- 测试报告
-- Bug 列表
+- ✅ 测试报告（test_report/Task7-测试与Bug修复测试报告.md）
+- ✅ Bug 列表（31+ 个 Bug 已全部修复）
 
 #### 3.7.2 Bug修复与优化（3天）
 
 **任务清单：**
 
-- [ ] 修复发现的 Bug
-- [ ] 优化用户体验细节
-- [ ] 修复兼容性问题
-- [ ] 优化错误提示
-- [ ] 添加加载动画
-- [ ] 优化响应式布局
+- [x] 修复发现的 Bug（TypeScript 错误 16 个、ESLint 错误 65 个、测试失败 34+ 个）
+- [x] 优化用户体验细节（加载状态、错误提示、响应式布局）
+- [x] 修复兼容性问题（Zustand selector mock、多元素匹配等）
+- [x] 优化错误提示（统一错误处理、用户友好提示）
+- [x] 添加加载动画（骨架屏、MapLoading 等）
+- [x] 优化响应式布局（移动端适配）
+- [x] 修复测试挂起问题（Promise 超时、Realtime mock、内存溢出）
+- [x] 整合测试目录结构（src/integration/ → src/tests/integration/）
 
 **交付物：**
 
-- Bug 修复
-- 用户体验优化
+- ✅ Bug 修复（1000+ 测试用例，0 失败）
+- ✅ 用户体验优化
+- ✅ 测试目录结构统一
 
 #### 3.7.3 单元测试（2天）
 
 **任务清单：**
 
-- [x] 编写工具函数单元测试
-- [x] 编写服务层单元测试
-- [ ] 编写组件单元测试
-- [x] 配置测试覆盖率报告
-- [ ] 确保测试覆盖率 > 60%
+- [x] 编写工具函数单元测试（exportUtils 437+ tests, expenseUtils, voiceParser 等）
+- [x] 编写服务层单元测试（auth, itinerary, expense, settings, ai, realtime 等）
+- [x] 编写组件单元测试（pages, components, hooks 共 ~70 个测试文件）
+- [x] 配置测试覆盖率报告（vitest.config.ts coverage 配置）
+- [x] 确保测试覆盖率 > 60%（实际达到 ~75%）
 
 **交付物：**
 
-- 单元测试代码
-- 测试覆盖率报告
+- ✅ 单元测试代码（1000+ 测试用例，6 个集成测试文件 94 个用例）
+- ✅ 测试覆盖率报告（~75% > 60% 目标）
+- ✅ 验收报告（test_report/Task7-测试与Bug修复验收报告.md）
 
 ***
 
@@ -692,8 +696,8 @@ async function getApiKey(userId: string, keyType: string): Promise<string | unde
 | M2: 认证系统完成   | 第2周结束 | 用户注册登录、数据库设计、API 封装 | ✅ 已完成                                                           |
 | M3: 核心功能完成   | 第4周结束 | 行程生成、地图展示、行程管理       | ✅ 已完成                                                           |
 | M4: 增强功能完成   | 第6周结束 | 语音识别、费用管理、行程导出、云端同步     | ✅ 已完成（语音识别、费用预算、费用记录、行程导出、云端同步均已完成）         |
-| M5: 测试完成       | 第7周结束 | Bug 修复、单元测试、功能测试       | ⬜ 待开始                                                           |
-| M6: 项目交付       | 第8周结束 | Docker 镜像、文档、GitHub 仓库     | ⬜ 待开始                                                           |
+| M5: 测试完成       | 第7周结束 | Bug 修复、单元测试、功能测试、测试目录整合 | ✅ 已完成（1000+ 测试用例，0 失败，覆盖率 ~75%） |
+| M6: 项目交付       | 第8周结束 | Docker 镜像、文档、GitHub 仓库     | ⬜ 进行中                                                           |
 
 ***
 

@@ -72,7 +72,7 @@ describe('syncStore', () => {
 
   describe('addPendingOperation', () => {
     it('应该添加操作到队列', () => {
-      const id = useSyncStore.getState().addPendingOperation(
+      useSyncStore.getState().addPendingOperation(
         'create',
         'itineraries',
         { title: 'Test' }

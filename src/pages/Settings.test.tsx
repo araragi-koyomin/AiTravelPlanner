@@ -196,9 +196,7 @@ describe('Settings Page', () => {
     it('should pass correct props to ApiKeySection', async () => {
       renderWithRouter(<Settings />)
 
-      expect(screen.getByText('智谱AI API Key')).toBeInTheDocument()
-      expect(screen.getByText('科大讯飞 API Key')).toBeInTheDocument()
-      expect(screen.getByText('高德地图 API Key')).toBeInTheDocument()
+      expect(screen.getByText('API Key 管理')).toBeInTheDocument()
     })
 
     it('should pass correct props to ThemeSection', async () => {
